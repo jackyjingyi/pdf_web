@@ -1,6 +1,8 @@
 *~
 *#
 *.swp
+*.pdf
+*.xlsx
 
 __pycache__/
 *.py[cod]
