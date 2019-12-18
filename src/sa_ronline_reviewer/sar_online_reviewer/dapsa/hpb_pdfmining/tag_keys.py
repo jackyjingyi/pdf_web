@@ -1,3 +1,4 @@
+import os
 BEGIN_KEYS = [
     'Parts Inventory',
 ]
@@ -53,7 +54,7 @@ MONTH = {
     'Dec': 12,
 }
 
-PROTOCOLS = './documents/protocols/tt1/'
+PROTOCOLS = os.path.join(BASE_DIR,'hpb_pdfmining/documents/protocols/tt1/')
 
 LAB_INFO = {
     'TUV': {},
@@ -62,8 +63,8 @@ LAB_INFO = {
 }
 
 TARGET_KEYS = [
-    'child vendor code',
-    'amazon style id',
+    "child vendor code",
+    "amazon style id",
     'parent asin',
     'acc trf#',
     "testing stage",
@@ -76,7 +77,7 @@ TARGET_KEYS = [
 ]
 
 PATH = {
-    'path': './documents/reports/',
+    'path': os.path.join(BASE_DIR,'hpb_pdfmining/documents/reports/'),
     'sub_path': {4: '4columns/', 5: '56columns/', 6: '56columns/', 'cornerstone': 'others/', 'check': 'check/'},
 }
 # all country combinations in all tuv protocols

@@ -24,8 +24,10 @@ from hpb_pdfmining.tag_keys import SKIP_KEYS, BEGIN_KEYS, INFO_KEYS, DATE_PATTER
 from hpb_pdfmining.mapper import predefine_, pdf_df_rename, get_protocol, Mapper
 from hpb_pdfmining.analyze_class import check_dict, keyword_modify, keyword_contains_in, resove_dict
 from hpb_pdfmining.main_decorators import timeout, check_first_page_with_dict, check_not_first_page_with_dict, controller
-from hpb_pdfmining.extractors import *
+from hpb_pdfmining.extractors import FirstPageInfo, user_select_from_list, PDFExtractor, PageExtractor, checkpointsvaliadation,
+append_df_to_excel, find_key, find_right_neightbors
 
+p = Point()
 
 
 

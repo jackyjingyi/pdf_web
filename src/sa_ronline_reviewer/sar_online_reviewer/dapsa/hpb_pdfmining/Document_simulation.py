@@ -1,5 +1,5 @@
 import os
-from .tag_keys import PATH
+from tag_keys import PATH
 
 """
 delete when upload function completed

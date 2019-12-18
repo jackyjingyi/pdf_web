@@ -5,7 +5,7 @@ import pandas as pd
 from pdfminer.pdfpage import PDFPage
 from openpyxl.utils import get_column_letter
 from openpyxl.styles import PatternFill, Border, Side, Alignment, Protection, Font, colors
-from .excel_styles import get_style, STYLES, style_range, adjust_range_size
+from excel_styles import get_style, STYLES, style_range, adjust_range_size
 import logging
 
 PTS = 0.2

@@ -1,12 +1,12 @@
 import time
 import logging
 import pandas as pd
-from .tag_keys import SKIP_KEYS, BEGIN_KEYS, INFO_KEYS, DATE_PATTERN, MONTH, PROTOCOLS, PATH
-from .analyze_class import check_dict, keyword_modify, keyword_contains_in, resove_dict
+from tag_keys import SKIP_KEYS, BEGIN_KEYS, INFO_KEYS, DATE_PATTERN, MONTH, PROTOCOLS, PATH
+from analyze_class import check_dict, keyword_modify, keyword_contains_in, resove_dict
 import string
 from datetime import datetime
 import re
-from .mapper import predefine_, pdf_df_rename, get_protocol, Mapper
+from mapper import predefine_, pdf_df_rename, get_protocol, Mapper
 import os
 import pdfminer
 from pdfminer.pdfparser import PDFParser
@@ -22,16 +22,11 @@ from openpyxl import Workbook,load_workbook
 from openpyxl.utils import get_column_letter
 # local
 
-from .pdf_layouts import Point, Cluster, Cell, Table, approxiamtion, inside
-from .Document_simulation import Document
+from pdf_layouts import Point, Cluster, Cell, Table, approxiamtion, inside
+from Document_simulation import Document
 
-from .main_decorators import timeout, check_first_page_with_dict, check_not_first_page_with_dict, controller
+from main_decorators import timeout, check_first_page_with_dict, check_not_first_page_with_dict, controller
 
-__all__ = ['FirstPageInfo', 'user_select_from_list', 'PDFExtractor', 'PageExtractor','checkpointsvaliadation',
-'append_df_to_excel','find_key','find_right_neightbors',]
-
-PAGE_DICT = {}
-DICT_PAGE = {}
 
 LINE_MARGIN = 0.09
 CHAR_MARGIN = 0.5
@@ -190,7 +185,6 @@ def find_right_neightbors(media_bbox, layout, obj, width=3, pts=0.2, position='b
             find_right_neightbors(media_bbox == media_bbox, layout=layout, obj=obj)
 
 
-@check_first_page_with_dic
 class FirstPageInfo:
     """
     collect information from layouts in first page, mainly in first page
@@ -609,6 +603,8 @@ class PDFExtractor:
     """
 
     def __init__(self, fp, target=None):
+        self.PAGE_DICT = {}
+        self.DICT_PAGE = {}
         self.fp = fp
         self.parser = PDFParser(fp)
         self.document = PDFDocument(self.parser)
@@ -622,13 +618,17 @@ class PDFExtractor:
         self.target_page = target
         self.begin_page = None
         self.general_info = None
+        for pnumber, page in enumerate(PDFPage.get_pages(self.fp), start =1):
+            self.PAGE_DICT[pnumber] = page.pageid
+            self.DICT_PAGE[page.pageid] = pnumber
+        logging.debug("Page Dict: %s" % self.PAGE_DICT)
+        logging.debug("Page Dict reverse : %s" % self.DICT_PAGE)
 
     def collect_first_page_info(self):
         temp_laparams = LAParams(line_margin=0.3, char_margin=1.5, all_texts=True, boxes_flow=0.5)
         temp_pageagg = PDFPageAggregator(self.rsrcmgr, laparams=temp_laparams)
         temp_interpreter = PDFPageInterpreter(self.rsrcmgr, temp_pageagg)
-        self.general_info = {'report number': None, 'protocol': None, 'vendor name': None, 'factory name': None,
-                             'lab': None}
+        self.general_info = {'report number': None, 'protocol': None, 'vendor name': None, 'factory name': None, 'lab': None}
         for p in PDFPage.get_pages(self.fp):
             temp_interpreter.process_page(p)
             layout = temp_pageagg.get_result()
@@ -641,6 +641,7 @@ class PDFExtractor:
 
     def get_begin_page(self, check_list):
         """
+        larger params makes it quicker
         :param check_list:  BEGIN KEY
         :return:
         """
@@ -648,7 +649,6 @@ class PDFExtractor:
         temp_pageagg = PDFPageAggregator(self.rsrcmgr, laparams=temp_laparams)
         temp_interpreter = PDFPageInterpreter(self.rsrcmgr, temp_pageagg)
 
-        @check_not_first_page_with_dict(PAGE_DICT)
         @timeout(5)
         def check_begin_keys(page, interpreter, pageagg, check_list):
             interpreter.process_page(page)
@@ -669,19 +669,19 @@ class PDFExtractor:
 
         page_no = -1
         for p in PDFPage.get_pages(self.fp):
-            try:
-                m = check_begin_keys(p, interpreter=temp_interpreter, pageagg=temp_pageagg,
-                                     check_list=check_list)
-                if m:
-                    page_no = DICT_PAGE[p.pageid]
-                    logging.info("Find begin page %d" % page_no)
+            if p.pageid != self.PAGE_DICT[1]:
+                try:
+                    m = check_begin_keys(p, interpreter=temp_interpreter, pageagg=temp_pageagg, check_list=check_list)
+                    if m:
+                        page_no = self.DICT_PAGE[p.pageid]
+                        logging.info("Find begin page %d" % page_no)
+                        break
+                except TimeoutError:
+                    logging.debug("Time out for detecting begin page")
                     break
-            except TimeoutError:
-                logging.debug("Time out for detecting begin page")
-                break
         
         self.begin_page = page_no
-        return self.begin_page
+        
 
     @timeout(5)
     def process_page(self):
@@ -689,14 +689,14 @@ class PDFExtractor:
             if self.target_page:
                 for p in PDFPage.get_pages(self.fp):
                     for tp in self.target_page:
-                        if p.pageid == PAGE_DICT[tp]:
+                        if p.pageid == self.PAGE_DICT[tp]:
                             self.interpreter.process_page(p)
                             layout = self.pageagg.get_result()
                             yield PageExtractor(layout=layout, pageid=p.pageid, cache=True)
             else:
                 start = self.begin_page            
                 for p in PDFPage.get_pages(self.fp):
-                    if DICT_PAGE[p.pageid] >= start:
+                    if self.DICT_PAGE[p.pageid] >= start:
                         self.interpreter.process_page(p)
                         layout = self.pageagg.get_result()
                         yield PageExtractor(layout=layout, pageid=p.pageid, cache=True)
@@ -723,24 +723,24 @@ class PDFExtractor:
             assert isinstance(single, type(None))
             for p in PDFPage.get_pages(self.fp):
                 if start and not end:
-                    if DICT_PAGE[p.pageid] >= start:
+                    if self.DICT_PAGE[p.pageid] >= start:
                         self.interpreter.process_page(p)
                         layout = self.pageagg.get_result()
                         yield PageExtractor(layout=layout, pageid=p.pageid, cache=True)
                 elif start and end:
-                    if start <= DICT_PAGE[p.pageid] <= end:
+                    if start <= self.DICT_PAGE[p.pageid] <= end:
                         self.interpreter.process_page(p)
                         layout = self.pageagg.get_result()
                         yield PageExtractor(layout=layout, pageid=p.pageid, cache=True)
                 elif not start and end:
-                    if 1 <= DICT_PAGE[p.pageid] <= end:
+                    if 1 <= self.DICT_PAGE[p.pageid] <= end:
                         self.interpreter.process_page(p)
                         layout = self.pageagg.get_result()
                         yield PageExtractor(layout=layout, pageid=p.pageid, cache=True)
         else:
             assert isinstance(single, int), "if not start , end , single must be given"
             for p in PDFPage.get_pages(self.fp):
-                if DICT_PAGE[p.pageid] == single:
+                if self.DICT_PAGE[p.pageid] == single:
                     self.interpreter.process_page(p)
                     layout = self.pageagg.get_result()
                     yield PageExtractor(layout=layout, pageid=p.pageid, cache=True)
@@ -753,34 +753,26 @@ if __name__ == '__main__':
 
     doc = Document(path=path, sub_path=sub_path, doc_id=8)
     doc()
-    print(doc)
+    
     tag_name = doc.get_file_name()
 
     # os.startfile(doc.file_path)
     pages = tag_name.split('-')
     # target_pages = [9]
     fp = open(doc.file_path, 'rb')
-    for pageid, page in enumerate(PDFPage.get_pages(fp), start=1):
-        PAGE_DICT[pageid] = page.pageid
-        DICT_PAGE[page.pageid] = pageid
-    print(PAGE_DICT)
-    print(DICT_PAGE)
-
+ 
     pdf_ss = PDFExtractor(fp)
     genenral_info = pdf_ss.collect_first_page_info()
     pdf_ss.get_begin_page(BEGIN_KEYS)
     st = pdf_ss.process_page()
 
-    print(pdf_ss.general_info)
-    print(genenral_info)
     p = genenral_info['protocol']
     guessed = get_protocol(p, path=PROTOCOLS)
-    print(p, '-', guessed)
+   
     select_protocol = user_select_from_list(name='protocol', item=guessed)
-    print(select_protocol)
+
     protocol_df = pd.read_excel(PROTOCOLS + select_protocol)
 
-    print("coming", protocol_df.head())
     cat = Mapper(df=protocol_df)
     cat.predefine_checker_list()
     wb = Workbook()
@@ -795,18 +787,16 @@ if __name__ == '__main__':
         apage = next(st)
         apage()
         ws = wb.create_sheet()
-        apage.page_to_excel(ws=ws, ref=DICT_PAGE)
-        print("this is page")
+        apage.page_to_excel(ws=ws, ref=pdf_ss.DICT_PAGE)
+       
         body = apage.get_body()
         mouse = predefine_(body)
-        cat.verify_item(page_number=DICT_PAGE[apage.pageid], pdf_df=mouse)
+        cat.verify_item(page_number=pdf_ss.DICT_PAGE[apage.pageid], pdf_df=mouse)
         count += 1
 
     wb.save(os.getcwd() + '/excels/' + tag_name + 'newly' + '.xlsx')
     append_df_to_excel(os.getcwd() + '/excels/' + tag_name + 'newly' + '.xlsx', cat.df, sheet_name="result")
     end_time = time.time()
 
-    print(end_time - start_timestamp)
-    # os.startfile(os.getcwd() + '/excels/' + tag_name + 'newly' + '.xlsx')
 
 

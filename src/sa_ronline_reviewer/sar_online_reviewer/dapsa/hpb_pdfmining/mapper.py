@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import nltk
-from .analyze_class import keyword_modify
+from analyze_class import keyword_modify
 import re
 import logging
 import string
@@ -19,7 +19,7 @@ def predefine_(df):
     :param df: list read from protocol : list
     :return: True if no two test name are identical, False otherwise
     """
-    print(df.columns)
+  
     # normally if requirement is empty, then its bias
 
     df = pdf_df_rename(df)
