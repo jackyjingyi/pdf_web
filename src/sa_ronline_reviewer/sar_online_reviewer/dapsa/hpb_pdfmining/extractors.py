@@ -1,12 +1,12 @@
 import time
 import logging
 import pandas as pd
-from tag_keys import SKIP_KEYS, BEGIN_KEYS, INFO_KEYS, DATE_PATTERN, MONTH, PROTOCOLS, PATH
-from analyze_class import check_dict, keyword_modify, keyword_contains_in, resove_dict
+from .tag_keys import SKIP_KEYS, BEGIN_KEYS, INFO_KEYS, DATE_PATTERN, MONTH, PROTOCOLS, PATH
+from .analyze_class import check_dict, keyword_modify, keyword_contains_in, resove_dict
 import string
 from datetime import datetime
 import re
-from mapper import predefine_, pdf_df_rename, get_protocol, Mapper
+from .mapper import predefine_, pdf_df_rename, get_protocol, Mapper
 import os
 import pdfminer
 from pdfminer.pdfparser import PDFParser
@@ -22,10 +22,13 @@ from openpyxl import Workbook,load_workbook
 from openpyxl.utils import get_column_letter
 # local
 
-from pdf_layouts import Point, Cluster, Cell, Table, approxiamtion, inside
-from Document_simulation import Document
+from .pdf_layouts import Point, Cluster, Cell, Table, approxiamtion, inside
+from .Document_simulation import Document
 
-from main_decorators import timeout, check_first_page_with_dict, check_not_first_page_with_dict, controller
+from .main_decorators import timeout, check_first_page_with_dict, check_not_first_page_with_dict, controller
+
+__all__ = ['FirstPageInfo', 'user_select_from_list', 'PDFExtractor', 'PageExtractor','checkpointsvaliadation',
+'append_df_to_excel','find_key','find_right_neightbors',]
 
 PAGE_DICT = {}
 DICT_PAGE = {}
@@ -37,6 +40,8 @@ WORD_MARGIN = 0.5
 
 @controller()
 def user_select_from_list(name=None, item=None):
+    """
+    change to online for as a spindbox let user choose which protocol to use if not locate one"""
     print("select %s as %s" % (item, name))
     return item
 
@@ -185,7 +190,7 @@ def find_right_neightbors(media_bbox, layout, obj, width=3, pts=0.2, position='b
             find_right_neightbors(media_bbox == media_bbox, layout=layout, obj=obj)
 
 
-@check_first_page_with_dict(PAGE_DICT)
+@check_first_page_with_dic
 class FirstPageInfo:
     """
     collect information from layouts in first page, mainly in first page
@@ -739,6 +744,7 @@ class PDFExtractor:
                     self.interpreter.process_page(p)
                     layout = self.pageagg.get_result()
                     yield PageExtractor(layout=layout, pageid=p.pageid, cache=True)
+
 
 if __name__ == '__main__':
     start_timestamp = time.time()

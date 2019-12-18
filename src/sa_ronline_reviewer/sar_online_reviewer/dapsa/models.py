@@ -106,6 +106,8 @@ class ExtractionLog(models.Model):
 
 
 class MappingLog(models.Model):
+    """
+    Logs of Mapping stage =>(stage2)"""
     pass
 
 

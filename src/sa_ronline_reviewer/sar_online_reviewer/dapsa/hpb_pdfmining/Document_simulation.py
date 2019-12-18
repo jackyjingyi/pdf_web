@@ -1,6 +1,10 @@
 import os
-from tag_keys import PATH
+from .tag_keys import PATH
 
+"""
+delete when upload function completed
+
+"""
 
 class Document:
     'A simulation to django model'
@@ -31,10 +35,8 @@ if __name__ == '__main__':
     path = PATH['path']
     sub_path = PATH['sub_path'][4]
     doc_id = 1
-    print(path,sub_path)
-    print(os.listdir(path=path+sub_path)[doc_id])
     doc = Document(path=path,sub_path=sub_path,doc_id=doc_id)
     doc()
-    print(doc.__dict__)
+
 
 
