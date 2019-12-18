@@ -1,12 +1,12 @@
 import time
 import logging
 import pandas as pd
-from tag_keys import SKIP_KEYS, BEGIN_KEYS, INFO_KEYS, DATE_PATTERN, MONTH, PROTOCOLS, PATH
-from analyze_class import check_dict, keyword_modify, keyword_contains_in, resove_dict
+from .tag_keys import SKIP_KEYS, BEGIN_KEYS, INFO_KEYS, DATE_PATTERN, MONTH, PROTOCOLS, PATH
+from .analyze_class import check_dict, keyword_modify, keyword_contains_in, resove_dict
 import string
 from datetime import datetime
 import re
-from mapper import predefine_, pdf_df_rename, get_protocol, Mapper
+from .mapper import predefine_, pdf_df_rename, get_protocol, Mapper
 import os
 import pdfminer
 from pdfminer.pdfparser import PDFParser
@@ -22,10 +22,10 @@ from openpyxl import Workbook,load_workbook
 from openpyxl.utils import get_column_letter
 # local
 
-from pdf_layouts import Point, Cluster, Cell, Table, approxiamtion, inside
-from Document_simulation import Document
+from .pdf_layouts import Point, Cluster, Cell, Table, approxiamtion, inside
+from .Document_simulation import Document
 
-from main_decorators import timeout, check_first_page_with_dict, check_not_first_page_with_dict, controller
+from .main_decorators import timeout, check_first_page_with_dict, check_not_first_page_with_dict, controller
 
 
 LINE_MARGIN = 0.09

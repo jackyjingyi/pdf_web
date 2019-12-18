@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import nltk
-from analyze_class import keyword_modify
+from .analyze_class import keyword_modify
 import re
 import logging
 import string
