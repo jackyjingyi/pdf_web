@@ -1,7 +1,6 @@
 # SARonlineReviewer
 
-** Describe SARonlineReviewer here **
-
+This project working on extracte, manipulate and display with PDF. And extra NLP and text mapping skills are used. 
 ## Documentation
 
 Generated documentation for the latest released version can be accessed here:
