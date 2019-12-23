@@ -25,7 +25,7 @@ SECRET_KEY = 'yi(6k6i12y+!t==k@#v+ya+cbf&s@lq)zgw$7ov+t9l@f0s(x6'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -100,7 +100,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
+FILE_UPLOAD_PERMISSIONS=0o640
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/
 

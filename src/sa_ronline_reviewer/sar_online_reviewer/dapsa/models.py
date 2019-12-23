@@ -1,10 +1,16 @@
 from django.db import models
 import uuid
+import os
+
+def pl_dirtory_path(instance, filename):
+
+    return "reports/{0}/{1}".format(instance.pl, filename)
 
 class Document(models.Model):
     caseid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     description = models.CharField(max_length=255,blank=True)
-    doc = models.FileField(upload_to='reports/%Y/%m/%d')
+    pl = models.CharField(max_length=255, default='temp', blank=True)
+    upload = models.FileField(upload_to=pl_dirtory_path)
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
 class Protocols(models.Model):
@@ -12,7 +18,7 @@ class Protocols(models.Model):
     protocol_name = models.CharField(max_length=200,verbose_name='Protocol Name',unique=True)
     short_cut = models.CharField(max_length=50)
     version = models.CharField(max_length=25)
-    amazon_number = models.CharField(max_length=25)
+    amazon_number = models.IntegerField()
 
 class Protocol(models.Model):
     # if spec number, this can be a key identifier
