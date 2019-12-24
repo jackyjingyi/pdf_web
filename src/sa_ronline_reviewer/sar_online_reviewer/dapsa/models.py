@@ -6,11 +6,15 @@ def pl_dirtory_path(instance, filename):
 
     return "reports/{0}/{1}".format(instance.pl, filename)
 
+class TestDoc(models.Model):
+    docfile = models.FileField(upload_to='test/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
 class Document(models.Model):
     caseid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     description = models.CharField(max_length=255,blank=True)
     pl = models.CharField(max_length=255, default='temp', blank=True)
-    upload = models.FileField(upload_to=pl_dirtory_path)
+    upload = models.FileField(upload_to=pl_dirtory_path, max_length=255)
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
 class Protocols(models.Model):

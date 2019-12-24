@@ -18,6 +18,7 @@ from datetime import datetime
 from openpyxl import Workbook, load_workbook
 from openpyxl.utils import get_column_letter
 from django.shortcuts import render, redirect
+from django.urls import reverse
 from django.http import HttpResponse
 from django.views import View
 from .models import Protocols
@@ -27,8 +28,9 @@ from .hpb_pdfmining.mapper import predefine_, pdf_df_rename, get_protocol, Mappe
 from .hpb_pdfmining.analyze_class import check_dict, keyword_modify, keyword_contains_in, resove_dict
 from .hpb_pdfmining.main_decorators import timeout, check_first_page_with_dict, check_not_first_page_with_dict, controller
 from .hpb_pdfmining.extractors import FirstPageInfo, user_select_from_list, PDFExtractor, PageExtractor, checkpointsvaliadation, append_df_to_excel, find_key, find_right_neightbors
-from .models import Document, MiningLog
-from .forms import DocumentForm
+from .models import Document, MiningLog, TestDoc
+from .forms import DocumentForm, TestDocForm
+from django.views.decorators.csrf import csrf_protect
 import uuid
 """
 class to render or serilize the output to json and then pass it to frontend
@@ -45,20 +47,39 @@ def upload(request):
     """
     upload a pdf file, store it into document & mininglog"""
     if request == "POST":
-        form = DocumentForm(request.POST, request.FILES)
+        form = DocumentForm(data = request.POST, files = request.FILES)
+        print(request.FILES)
         if form.is_valid():
-            sid = form.instance
-            form['upload'] = request.FILES['file']
-            form.save()
-            return redirect('home')
-        else:
-            print(form.errors)
+            new_doc = Document(description = request.POST['descrption'],pl=request['pl'],upload = request.FILES['upload'])
+            new_doc.save()
+            return redirect(reverse('upload'))
+   
     else:
         form = DocumentForm()
-    return render(request, 'dapsa/main.html', {
+    documents = Document.objects.all()
+    return render(request, 'dapsa/upload.html', {'documents':documents,
         'form': form
     })
 
+def list(request):
+    # Handle file upload
+    if request.method == 'POST':
+        form = TestDocForm(request.POST, request.FILES)
+        if form.is_valid():
+            newdoc = TestDoc(docfile = request.FILES['docfile'])
+            newdoc.save()
+
+            # Redirect to the document list after POST
+            return redirect(reverse('list'))
+    else:
+        form = TestDocForm() # A empty, unbound form
+
+    # Load documents for the list page
+    documents = TestDoc.objects.all()
+
+
+    # Render list page with the documents and the form
+    return render(request, 'dapsa/list.html', {'documents': documents, 'form': form})
 
 def pdf_analysis_main(docobject):
     # frist create an instance to Mining Queue, if there are workers avaliable, pop queue,
