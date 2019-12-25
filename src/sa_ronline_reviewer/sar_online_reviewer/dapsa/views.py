@@ -31,6 +31,11 @@ from .hpb_pdfmining.extractors import FirstPageInfo, user_select_from_list, PDFE
 from .models import Document, MiningLog, TestDoc
 from .forms import DocumentForm, TestDocForm
 from django.views.decorators.csrf import csrf_protect
+from django.contrib.auth.models import User
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.decorators import login_required
+from django.views.generic import TemplateView
+from django.contrib.auth.mixins import LoginRequiredMixin
 import uuid
 """
 class to render or serilize the output to json and then pass it to frontend
@@ -40,46 +45,73 @@ class to render or serilize the output to json and then pass it to frontend
 
 
 def home(request):
-    return HttpResponse('Hello world')
+    count = User.objects.count()
+    return render(request, 'home.html', {
+        'count': count
+    })
+
+
+def signup(request):
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('home')
+    else:
+        form = UserCreationForm()
+    return render(request, 'registration/signup.html', {
+        'form': form
+    })
+
+
+@login_required
+def secret_page(request):
+    return render(request, 'dapsa/upload.html')
+
+
+class SecretPage(LoginRequiredMixin, TemplateView):
+    template_name = 'secret_page.html'
 
 
 def upload(request):
     """
     upload a pdf file, store it into document & mininglog"""
     if request == "POST":
-        form = DocumentForm(data = request.POST, files = request.FILES)
+        form = DocumentForm(data=request.POST, files=request.FILES)
         print(request.FILES)
         if form.is_valid():
-            new_doc = Document(description = request.POST['descrption'],pl=request['pl'],upload = request.FILES['upload'])
+            new_doc = Document(
+                description=request.POST['descrption'], pl=request['pl'], upload=request.FILES['upload'])
             new_doc.save()
             return redirect(reverse('upload'))
-   
+
     else:
         form = DocumentForm()
     documents = Document.objects.all()
-    return render(request, 'dapsa/upload.html', {'documents':documents,
-        'form': form
-    })
+    return render(request, 'dapsa/upload.html', {'documents': documents,
+                                                 'form': form
+                                                 })
+
 
 def list(request):
     # Handle file upload
     if request.method == 'POST':
         form = TestDocForm(request.POST, request.FILES)
         if form.is_valid():
-            newdoc = TestDoc(docfile = request.FILES['docfile'])
+            newdoc = TestDoc(docfile=request.FILES['docfile'])
             newdoc.save()
 
             # Redirect to the document list after POST
             return redirect(reverse('list'))
     else:
-        form = TestDocForm() # A empty, unbound form
+        form = TestDocForm()  # A empty, unbound form
 
     # Load documents for the list page
     documents = TestDoc.objects.all()
 
-
     # Render list page with the documents and the form
     return render(request, 'dapsa/list.html', {'documents': documents, 'form': form})
+
 
 def pdf_analysis_main(docobject):
     # frist create an instance to Mining Queue, if there are workers avaliable, pop queue,

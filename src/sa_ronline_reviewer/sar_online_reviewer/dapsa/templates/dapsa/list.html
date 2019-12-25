@@ -11,7 +11,8 @@
     {% if documents %}
     <ul>
         {% for document in documents %}
-        <li><a href="{{ document.docfile.url }}">{{ document.docfile.name }}</a></li>
+        <li><a href="{{ document.docfile.url }}">{{ document.docfile.name }}</a><button>Anlysis</button></li>
+        
         {% endfor %}
     </ul>
     {% else %}
