@@ -17,10 +17,10 @@ SKIP_KEYS = [
 ]
 
 INFO_KEYS = {
-    'report number': ['PrüfberichtNr Test Report No', 'PrüfberichtNr Test Report  No', 'Test Report No'],
+    'report_number': ['PrüfberichtNr Test Report No', 'PrüfberichtNr Test Report  No', 'Test Report No','Prüfbericht-Nr.:'],
     'protocol': ['Prüfgrundlage Test specification', 'Test specification'],
-    'vendor name': ['Vender Name'],
-    'factory name': ['Factory Name', 'Factory  Name'],
+    'vendor_name': ['Vender Name'],
+    'factory_name': ['Factory Name', 'Factory  Name'],
     'lab': ['TUV Rheinland', 'TÜV Rheinland'],
 }
 
@@ -62,19 +62,29 @@ LAB_INFO = {
     'BV': {},
 }
 
-TARGET_KEYS = [
-    "child vendor code",
-    "amazon style id",
-    'parent asin',
-    'acc trf#',
-    "testing stage",
-    "stage of testing",
-    "report number",
-    "test report number",
-    "report no",
-    "test report no",
-    "number"
+BASIC_INFO = [
+    {
+        'item' : 'report number',
+        'keywords': ['Test Report No.:',]
+    },
+    {
+        'item': 'protocol',
+        'keywords': ['cornerstone']
+    },
+    {
+        'item': 'vendor',
+        'keywords': ['vendor#'],
+    },
+    {
+        'item': 'factory',
+        'keywords':['factory#'],
+    },
+    {
+        'item': 'lab',
+        'keywords': ['TUV Rheinland', 'TÜV Rheinland'],
+    }
 ]
+
 
 PATH = {
     'path': os.path.join(os.getcwd(),'hpb_pdfmining/documents/reports/'),

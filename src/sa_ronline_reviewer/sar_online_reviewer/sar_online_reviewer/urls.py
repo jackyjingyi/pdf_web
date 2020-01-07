@@ -8,7 +8,6 @@ from dapsa import views
 urlpatterns = [
     path('', views.home, name='home'),
     path('dapsa/', include('dapsa.urls'), name = "dapsa"),
-    
     path('admin/', admin.site.urls),
 ]
 

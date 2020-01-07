@@ -6,7 +6,8 @@ urlpatterns = [
     path('', views.signup, name = "signup"),
     path('accounts/', include('django.contrib.auth.urls')),
     path('secret/', views.secret_page, name = 'secret'),
-    path('secret/upload/',views.upload , name = 'upload'),
-    path('list', views.list, name = 'list')
+    path('secretProtocol/', views.secret_page_protocol_audit, name = 'secret_protocl'),
+    path('secret/tasks/', views.tasks, name = 'tasks'),
+    path('secret/tasks/<str:pdf_path>/', views.pdfmain, name='pdfmain' ),
 ]
 

@@ -1,3 +1,5 @@
 from django.contrib import admin
+from .models import TestDoc
 
-# Register your models here.
+
+admin.site.register(TestDoc)

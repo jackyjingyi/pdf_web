@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% block content %}
+
+<!-- List of uploaded documents -->
+<div class="container">
+
+    {% if documents %}
+    <ul class="list-group">
+        {% for document in documents %}
+        <li class="list-group-item">
+            <div class="row">
+                <div class="col-lg">
+                    <button type="button" class="list-group-item list-group-item-action">
+                        {{ document.pl }}
+                    </button>
+                </div>
+                <div class="col">
+                    <button type="button" class="list-group-item list-group-item-action">
+                        <a href="{% url 'pdfmain' document.caseid %}">
+                            {{ document.filename }}
+                        </a>
+                    </button>
+                </div>
+                <div class="col">
+                    <button type="button" class="list-group-item list-group-item-action">
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p>No documents.</p>
+    {% endif %}
+
+
+    <!-- Upload form. Note enctype attribute! 
+    <div class="input-group">
+        <div class="input-group-prepend">
+            <span class="input-group-text" id="inputGroupFileAddon01">Upload</span>
+        </div>
+        <div class="custom-file">
+            <input type="file" class="custom-file-input" id="inputGroupFile01" aria-describedby="inputGroupFileAddon01">
+            <label class="custom-file-label" for="inputGroupFile01">Choose file</label>
+        </div>
+    </div> -->
+
+    <div id="upload_form" class="input-group mb-3">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div>
+                {{ form|crispy }}
+                <input type="submit" value="Upload" />
+            </div>
+        </form>
+    </div>
+
+
+</div>
+{% endblock %}

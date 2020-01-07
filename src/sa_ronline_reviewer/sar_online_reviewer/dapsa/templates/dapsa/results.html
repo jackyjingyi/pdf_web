@@ -1,0 +1,9 @@
+{% extends 'analysis.html' %}
+{% load crispy_forms_tags %}
+{% block results %}
+<div class = "container">
+    {% for key,value in dict.items %}
+        <span>{{ key }} : </span><span>{{ value }}</span><br>
+    {% endfor %}
+</div>
+{% endblock %}

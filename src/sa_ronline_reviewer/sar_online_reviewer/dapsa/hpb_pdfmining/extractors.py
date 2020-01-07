@@ -185,251 +185,6 @@ def find_right_neightbors(media_bbox, layout, obj, width=3, pts=0.2, position='b
             find_right_neightbors(media_bbox == media_bbox, layout=layout, obj=obj)
 
 
-class FirstPageInfo:
-    """
-    collect information from layouts in first page, mainly in first page
-    atttr = {
-        Vendor Name : vendor name : str => done
-        Factory Name: factory name: str => done
-        Report issue date : report_issue_date : str => guessing format not done
-        Protocol used for review: protocol : str => done
-        All reviewed  Report  number :  report number : str => done
-        Lab: lab: tuple(lab name, region) can related to dict => done
-    }
-    input :
-        layout : pdfminer.ltpage
-        attr : assign an external dict
-        media_bbox: media bbox of first page
-    function:
-        get_info() : main function, update items to attr
-        get_report_issue_date(): return largest date according to regex and given date format,returns a date type
-        refine_lab(): regex to refine lab info
-        refine_vendor: regex to refine vendor name && factory name
-    output:
-        a dict contains import information to back fill to tracker,
-        if any part not located, should returns a warning
-    """
-
-    def __init__(self, page, layout, attr, media_bbox):
-        self.page = page
-        self.layout = layout
-        self.attr = attr
-        self.media_bbox = media_bbox
-        self.potential_date_list = set()
-        self.first_keys = ['report number', 'protocol', 'vendor name', 'factory name', 'lab']
-        if not isinstance(self.attr, dict):
-            raise TypeError
-
-    def __call__(self, *args, **kwargs):
-        self.get_info()
-        self.get_report_issue_date(pattern='oo/dd/yyyy')
-        self.refine('report number')
-        self.refine_lab()
-        self.refine_vender()
-
-    def get_info(self):
-        controler = [False] * len(self.first_keys)
-        slot = [None] * len(self.first_keys)
-        for element in self.layout:
-            if all(controler):
-                break
-            else:
-                if isinstance(element, LTTextBox):
-                    if element.bbox[2] - element.bbox[0] > 3:
-                        print(element)
-                        for i in range(len(controler)):
-                            if not controler[i]:
-                                slot[i] = find_key(self.first_keys[i], element=element, the_dict=INFO_KEYS,
-                                                   start=0)
-                                # print("slot[{}] is {}".format(i, slot[i]))
-                                if slot[i]:
-                                    content = find_right_neightbors(self.media_bbox, self.layout, slot[i][1],
-                                                                    position='top')
-                                    try:
-                                        t = next(content)
-                                        self.attr[self.first_keys[i]] = t.strip()
-                                    except StopIteration:
-                                        content1 = find_right_neightbors(self.media_bbox, self.layout, slot[i][1],
-                                                                         width=5, pts=0.5)
-                                        t1 = next(content1)
-                                        self.attr[self.first_keys[i]] = t1
-                                    controler[i] = True
-                                else:
-                                    try:
-                                        current_dict = resove_dict(self.first_keys[i], the_dict=INFO_KEYS,
-                                                                   start=0)
-                                        # print("current_dict is ", current_dict)
-                                        for k in current_dict:
-                                            # print("this is k", k, element.get_text())
-                                            t = keyword_contains_in(keyword=k, target_str=element.get_text(),
-                                                                    split_mark=":", position=2, title=True)
-                                            # print("this is t", t)
-                                            if t:
-                                                self.attr[self.first_keys[i]] = k + " break " + t
-                                                # print("successfully update", self.attr)
-                                                break
-                                    except IndexError:
-                                        pass
-                        for k, v in DATE_PATTERN.items():
-                            logging.debug("checking element date %s , %s, %s" % (k, v, element.get_text()))
-                            potential_date = re.findall(v, element.get_text())
-                            
-                            if potential_date:
-                                self.potential_date_list.update(potential_date)
-        logging.debug("this is dates %s "% self.potential_date_list)
-        return self.attr
-
-    def get_report_issue_date(self, pattern=None, guess=True):
-        """
-
-        :param pattern: dd/mm/yyyy, yyyy/mm/dd, mm/dd/yyyy
-        :param guess: False when pattern is given, if True, try to guess the pattern
-        :return: date type
-        """
-
-        def get_date_numbers(*args, date_tuple):
-            """
-
-            :param args: 0:mm int, 1:dd int, 2:yyyy int
-            :param date_tuple: ('29', '.', '11', '.', '2018')
-            :return: mm, dd, yyyy
-            """
-            _temp_list = [i.strip() for i in date_tuple if i not in string.punctuation]
-            _temp_list = [i for i in _temp_list if i]
-            if len(_temp_list) == 3: 
-                mm = int(_temp_list[args[0]])
-                dd = int(_temp_list[args[1]])
-                yyyy = int(_temp_list[args[2]])
-                try:
-                    assert 0 < mm <= 12, "month should not greater than 12 or smaller than 1"
-                    assert 0 < dd <= 31, "days should not smaller than 1 or greater than 31"
-                    assert 2000 < yyyy < datetime.now().year +1, "years out of range"
-                except AssertionError:
-                    # default value returned
-                    return 1, 1, 2000   
-                return mm, dd, yyyy
-            else:
-                return 1, 1, 2000
-
-        def get_date_alpha(*args, date_tuple):
-            """
-            :param args: 0:str Oct, 1:dd int, 2: yyyy int
-            :param date_tuple: ('Oct', '-', '15', '-', '2018')
-            :return: mm, dd, yyyy
-            """
-            _temp_list = [i.strip() for i in date_tuple if i not in string.punctuation]
-            _temp_list = [j for j in _temp_list if j]
-            logging.debug("checking %s " % _temp_list)
-            try:
-                # MONTH is a dictionary
-                mm = MONTH[_temp_list[args[0]]]
-            except KeyError:
-                logging.debug("{%s} is not a valid month"%(_temp_list[args[0]]))
-                try:
-                    int(_temp_list[args[0]])
-                    # call last function
-                    return get_date_numbers(args[1], args[0], args[2], date_tuple=date_tuple)
-                except ValueError:
-                    return 0, 0, 0
-            dd = int(_temp_list[args[1]])
-            yyyy = int(_temp_list[args[2]])
-            
-            assert 0 < mm <= 12, "month should not greater than 12 or smaller than 1"
-            assert 0 < dd <= 31, "days should not smaller than 1 or greater than 31"
-            assert 2000 < yyyy < datetime.now().year +1, "years out of range"
-            return mm, dd, yyyy
-
-        def compare(date_tuple1, date_tuple2):
-            _seq = [2, 0, 1]
-            # date {mm, dd, yyyy}=> first compare year then month finally day
-            while len(_seq) > 0:
-                _current_index = _seq.pop(0)
-                if date_tuple1[_current_index] < date_tuple2[_current_index]:
-                    
-                    return date_tuple2
-                elif date_tuple1[_current_index] > date_tuple2[_current_index]:
-                    return date_tuple1
-                else:
-                    logging.debug("same date piece pass")
-                    pass
-            # only come to this end if all same (all goes else block)
-            return date_tuple1
-
-        if self.potential_date_list:
-            if pattern:
-                # pattern :str 
-                _temp_parttern_list = pattern.split('/')
-                alpha = False
-                try:
-                    # get month idx
-                    mm = _temp_parttern_list.index('mm')
-                except ValueError:
-                    alpha = True
-                    # oo repsents 'Jan','Feb'...
-                    mm = _temp_parttern_list.index('oo')
-                dd = _temp_parttern_list.index('dd')
-                yyyy = _temp_parttern_list.index('yyyy')
-                issue_date = (0, 0, 0)
-
-                for i in list(self.potential_date_list):
-                    if alpha:
-                        # alpha indicate if month represents by letters
-                        temp = get_date_alpha(mm, dd, yyyy, date_tuple=i)
-                        issue_date = compare(issue_date, temp)
-                    else:
-                        temp = get_date_numbers(mm, dd, yyyy, date_tuple=i)
-                        issue_date = compare(issue_date, temp)
-                try:
-                    assert issue_date != (0, 0, 0), "not finding correct issue date, for {%s}" % self.potential_date_list
-                except AssertionError:
-                    return "not found"
-                # datetime.strftime("%m/%d/%Y")
-                report_issue_date = datetime(month=issue_date[0], day=issue_date[1], year=issue_date[2])
-                self.attr['report_issue_date'] = report_issue_date.strftime("%m/%d/%Y")
-                return report_issue_date
-            else:
-                # guess part,
-                pass
-        else:
-            return "not found"
-
-    def refine_lab(self):
-        pattern = r"\((.*?)\)"
-        if len(self.attr['lab']) > 25:
-            _current = self.attr['lab']
-            try:
-                region = re.search(pattern, _current).group().strip("(|)")
-                lab = _current.partition(region)[0][:3]
-            except AttributeError:
-                lab, region = _current.partition("break")[0][:3], _current.partition("break")[2][:10]
-            self.attr['lab'] = (lab, region)
-            return lab, region
-
-    def refine(self, *args):
-        try:
-            if "break" in self.attr[args[0]]:
-                self.attr[args[0]] = keyword_modify(self.attr[args[0]].partition("break")[2].strip(),
-                                                    special=True).strip()
-        except KeyError:
-            pass
-
-    def refine_vender(self):
-        # "break" is the separator mark
-        try:
-            if "break" in self.attr['factory name']:
-                self.attr['factory name'] = self.attr['factory name'].partition("break")[2].strip()
-            if "Previous Test" in self.attr['factory name']:
-                self.attr['factory name'] = self.attr['factory name'].partition("Previous Test")[0].strip()
-        except KeyError:
-            pass
-        try:
-            if "break" in self.attr['vendor name']:
-                self.attr['vendor name'] = self.attr['vendor name'].partition("break")[2].strip()
-            if "Test Type" in self.attr['vendor name']:
-                self.attr['vendor name'] = self.attr['vendor name'].partition("Test Type")[0].strip()
-        except KeyError:
-            pass
-
 
 class PageExtractor:
 
@@ -596,6 +351,251 @@ class PageExtractor:
               re.sub('[\n\t]', '', ' '.join(keyword_modify(x,special=True).lower().split()))),
               column='reitem')
         
+class FirstPageInfo:
+        """
+        collect information from layouts in first page, mainly in first page
+        atttr = {
+            Vendor Name : vendor name : str => done
+            Factory Name: factory name: str => done
+            Report issue date : report_issue_date : str => guessing format not done
+            Protocol used for review: protocol : str => done
+            All reviewed  Report  number :  report number : str => done
+            Lab: lab: tuple(lab name, region) can related to dict => done
+        }
+        input :
+            layout : pdfminer.ltpage
+            attr : assign an external dict
+            media_bbox: media bbox of first page
+        function:
+            get_info() : main function, update items to attr
+            get_report_issue_date(): return largest date according to regex and given date format,returns a date type
+            refine_lab(): regex to refine lab info
+            refine_vendor: regex to refine vendor name && factory name
+        output:
+            a dict contains import information to back fill to tracker,
+            if any part not located, should returns a warning
+        """
+
+        def __init__(self, page, layout, attr, media_bbox):
+            self.page = page
+            self.layout = layout
+            self.attr = attr
+            self.media_bbox = media_bbox
+            self.potential_date_list = set()
+            self.first_keys = ['report_number', 'protocol', 'vendor_name', 'factory_name', 'lab']
+            if not isinstance(self.attr, dict):
+                raise TypeError
+
+        def __call__(self, *args, **kwargs):
+            self.get_info()
+            self.get_report_issue_date(pattern='oo/dd/yyyy')
+            self.refine('report_number')
+            self.refine_lab()
+            self.refine_vender()
+
+        def get_info(self):
+            controler = [False] * len(self.first_keys)
+            slot = [None] * len(self.first_keys)
+            for element in self.layout:
+                if all(controler):
+                    break
+                else:
+                    if isinstance(element, LTTextBox):
+                        if element.bbox[2] - element.bbox[0] > 3:
+                            print(element)
+                            for i in range(len(controler)):
+                                if not controler[i]:
+                                    slot[i] = find_key(self.first_keys[i], element=element, the_dict=INFO_KEYS,
+                                                    start=0)
+                                    # print("slot[{}] is {}".format(i, slot[i]))
+                                    if slot[i]:
+                                        content = find_right_neightbors(self.media_bbox, self.layout, slot[i][1],
+                                                                        position='top')
+                                        try:
+                                            t = next(content)
+                                            self.attr[self.first_keys[i]] = t.strip()
+                                        except StopIteration:
+                                            content1 = find_right_neightbors(self.media_bbox, self.layout, slot[i][1],
+                                                                            width=5, pts=0.5)
+                                            t1 = next(content1)
+                                            self.attr[self.first_keys[i]] = t1
+                                        controler[i] = True
+                                    else:
+                                        try:
+                                            current_dict = resove_dict(self.first_keys[i], the_dict=INFO_KEYS,
+                                                                    start=0)
+                                            # print("current_dict is ", current_dict)
+                                            for k in current_dict:
+                                                # print("this is k", k, element.get_text())
+                                                t = keyword_contains_in(keyword=k, target_str=element.get_text(),
+                                                                        split_mark=":", position=2, title=True)
+                                                # print("this is t", t)
+                                                if t:
+                                                    self.attr[self.first_keys[i]] = k + " break " + t
+                                                    # print("successfully update", self.attr)
+                                                    break
+                                        except IndexError:
+                                            pass
+                            for k, v in DATE_PATTERN.items():
+                                logging.debug("checking element date %s , %s, %s" % (k, v, element.get_text()))
+                                potential_date = re.findall(v, element.get_text())
+                                
+                                if potential_date:
+                                    self.potential_date_list.update(potential_date)
+            logging.debug("this is dates %s "% self.potential_date_list)
+            return self.attr
+
+        def get_report_issue_date(self, pattern=None, guess=True):
+            """
+
+            :param pattern: dd/mm/yyyy, yyyy/mm/dd, mm/dd/yyyy
+            :param guess: False when pattern is given, if True, try to guess the pattern
+            :return: date type
+            """
+
+            def get_date_numbers(*args, date_tuple):
+                """
+
+                :param args: 0:mm int, 1:dd int, 2:yyyy int
+                :param date_tuple: ('29', '.', '11', '.', '2018')
+                :return: mm, dd, yyyy
+                """
+                _temp_list = [i.strip() for i in date_tuple if i not in string.punctuation]
+                _temp_list = [i for i in _temp_list if i]
+                if len(_temp_list) == 3: 
+                    mm = int(_temp_list[args[0]])
+                    dd = int(_temp_list[args[1]])
+                    yyyy = int(_temp_list[args[2]])
+                    try:
+                        assert 0 < mm <= 12, "month should not greater than 12 or smaller than 1"
+                        assert 0 < dd <= 31, "days should not smaller than 1 or greater than 31"
+                        assert 2000 < yyyy < datetime.now().year +1, "years out of range"
+                    except AssertionError:
+                        # default value returned
+                        return 1, 1, 2000   
+                    return mm, dd, yyyy
+                else:
+                    return 1, 1, 2000
+
+            def get_date_alpha(*args, date_tuple):
+                """
+                :param args: 0:str Oct, 1:dd int, 2: yyyy int
+                :param date_tuple: ('Oct', '-', '15', '-', '2018')
+                :return: mm, dd, yyyy
+                """
+                _temp_list = [i.strip() for i in date_tuple if i not in string.punctuation]
+                _temp_list = [j for j in _temp_list if j]
+                logging.debug("checking %s " % _temp_list)
+                try:
+                    # MONTH is a dictionary
+                    mm = MONTH[_temp_list[args[0]]]
+                except KeyError:
+                    logging.debug("{%s} is not a valid month"%(_temp_list[args[0]]))
+                    try:
+                        int(_temp_list[args[0]])
+                        # call last function
+                        return get_date_numbers(args[1], args[0], args[2], date_tuple=date_tuple)
+                    except ValueError:
+                        return 0, 0, 0
+                dd = int(_temp_list[args[1]])
+                yyyy = int(_temp_list[args[2]])
+                
+                assert 0 < mm <= 12, "month should not greater than 12 or smaller than 1"
+                assert 0 < dd <= 31, "days should not smaller than 1 or greater than 31"
+                assert 2000 < yyyy < datetime.now().year +1, "years out of range"
+                return mm, dd, yyyy
+
+            def compare(date_tuple1, date_tuple2):
+                _seq = [2, 0, 1]
+                # date {mm, dd, yyyy}=> first compare year then month finally day
+                while len(_seq) > 0:
+                    _current_index = _seq.pop(0)
+                    if date_tuple1[_current_index] < date_tuple2[_current_index]:
+                        
+                        return date_tuple2
+                    elif date_tuple1[_current_index] > date_tuple2[_current_index]:
+                        return date_tuple1
+                    else:
+                        logging.debug("same date piece pass")
+                        pass
+                # only come to this end if all same (all goes else block)
+                return date_tuple1
+
+            if self.potential_date_list:
+                if pattern:
+                    # pattern :str 
+                    _temp_parttern_list = pattern.split('/')
+                    alpha = False
+                    try:
+                        # get month idx
+                        mm = _temp_parttern_list.index('mm')
+                    except ValueError:
+                        alpha = True
+                        # oo repsents 'Jan','Feb'...
+                        mm = _temp_parttern_list.index('oo')
+                    dd = _temp_parttern_list.index('dd')
+                    yyyy = _temp_parttern_list.index('yyyy')
+                    issue_date = (0, 0, 0)
+
+                    for i in list(self.potential_date_list):
+                        if alpha:
+                            # alpha indicate if month represents by letters
+                            temp = get_date_alpha(mm, dd, yyyy, date_tuple=i)
+                            issue_date = compare(issue_date, temp)
+                        else:
+                            temp = get_date_numbers(mm, dd, yyyy, date_tuple=i)
+                            issue_date = compare(issue_date, temp)
+                    try:
+                        assert issue_date != (0, 0, 0), "not finding correct issue date, for {%s}" % self.potential_date_list
+                    except AssertionError:
+                        return "not found"
+                    # datetime.strftime("%m/%d/%Y")
+                    report_issue_date = datetime(month=issue_date[0], day=issue_date[1], year=issue_date[2])
+                    self.attr['report_issue_date'] = report_issue_date.strftime("%m/%d/%Y")
+                    return report_issue_date
+                else:
+                    # guess part,
+                    pass
+            else:
+                return "not found"
+
+        def refine_lab(self):
+            pattern = r"\((.*?)\)"
+            if len(self.attr['lab']) > 25:
+                _current = self.attr['lab']
+                try:
+                    region = re.search(pattern, _current).group().strip("(|)")
+                    lab = _current.partition(region)[0][:3]
+                except AttributeError:
+                    lab, region = _current.partition("break")[0][:3], _current.partition("break")[2][:10]
+                self.attr['lab'] = (lab, region)
+                return lab, region
+
+        def refine(self, *args):
+            try:
+                if "break" in self.attr[args[0]]:
+                    self.attr[args[0]] = keyword_modify(self.attr[args[0]].partition("break")[2].strip(),
+                                                        special=True).strip()
+            except KeyError:
+                pass
+
+        def refine_vender(self):
+            # "break" is the separator mark
+            try:
+                if "break" in self.attr['factory_name']:
+                    self.attr['factory_name'] = self.attr['factory_name'].partition("break")[2].strip()
+                if "Previous Test" in self.attr['factory name']:
+                    self.attr['factory_name'] = self.attr['factory_name'].partition("Previous Test")[0].strip()
+            except KeyError:
+                pass
+            try:
+                if "break" in self.attr['vendor_name']:
+                    self.attr['vendor_name'] = self.attr['vendor_name'].partition("break")[2].strip()
+                if "Test Type" in self.attr['vendor_name']:
+                    self.attr['vendor_name'] = self.attr['vendor_name'].partition("Test Type")[0].strip()
+            except KeyError:
+                pass
+
 
 class PDFExtractor:
     """
@@ -624,19 +624,22 @@ class PDFExtractor:
         logging.debug("Page Dict: %s" % self.PAGE_DICT)
         logging.debug("Page Dict reverse : %s" % self.DICT_PAGE)
 
+
     def collect_first_page_info(self):
         temp_laparams = LAParams(line_margin=0.3, char_margin=1.5, all_texts=True, boxes_flow=0.5)
         temp_pageagg = PDFPageAggregator(self.rsrcmgr, laparams=temp_laparams)
         temp_interpreter = PDFPageInterpreter(self.rsrcmgr, temp_pageagg)
-        self.general_info = {'report number': None, 'protocol': None, 'vendor name': None, 'factory name': None, 'lab': None}
+        self.general_info = {'report_number': None, 'protocol': None, 'vendor_name': None, 'factory_name': None, 'lab': None}
         for p in PDFPage.get_pages(self.fp):
-            temp_interpreter.process_page(p)
-            layout = temp_pageagg.get_result()
-            try:
-                l = FirstPageInfo(p, layout=layout, media_bbox=p.mediabox, attr=self.general_info)
-                l()
-            except TypeError:
-                break
+            if p.pageid == self.PAGE_DICT[1]:
+                temp_interpreter.process_page(p)
+                layout = temp_pageagg.get_result()
+
+                try:
+                    l = FirstPageInfo(p, layout=layout, media_bbox=p.mediabox, attr=self.general_info)
+                    l()
+                except TypeError:
+                    break
         return self.general_info
 
     def get_begin_page(self, check_list):

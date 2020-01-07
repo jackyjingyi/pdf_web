@@ -3,6 +3,7 @@
 *.swp
 *.pdf
 *.xlsx
+node_module
 
 __pycache__/
 *.py[cod]
@@ -18,3 +19,4 @@ __pycache__/
 /doc/_apidoc/
 /build
 /Pipfile
+node_modules

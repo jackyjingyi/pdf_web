@@ -1,0 +1,38 @@
+{
+  "name": "SARonlineReviewer",
+  "version": "1.0.0",
+  "description": "This project working on extracte, manipulate and display with PDF. And extra NLP and text mapping skills are used.  ## Documentation",
+  "main": "index.js",
+  "directories": {
+    "doc": "doc",
+    "test": "test"
+  },
+  "scripts": {
+    "dev": "webpack --mode development ./src/sa_ronline_reviewer/sar_online_reviewer/frontend/src/index.js --output ./src/sa_ronline_reviewer/sar_online_reviewer/frontend/static/frontend/main.js",
+    "build": "webpack --mode production ./src/sa_ronline_reviewer/sar_online_reviewer/frontend/src/index.js --output ./src/sa_ronline_reviewer/sar_online_reviewer/frontend/static/frontend/main.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "ssh://git.amazon.com/pkg/SARonlineReviewer"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@babel/core": "^7.7.7",
+    "@babel/preset-env": "^7.7.7",
+    "@babel/preset-react": "^7.7.4",
+    "babel-loader": "^8.0.6",
+    "babel-plugin-transform-class-properties": "^6.24.1",
+    "pdfjs-dist": "^2.2.228",
+    "webpack": "^4.41.5",
+    "webpack-cli": "^3.3.10"
+  },
+  "dependencies": {
+    "canvas": "^2.6.1",
+    "gulp": "^4.0.2",
+    "prop-types": "^15.7.2",
+    "react": "^16.12.0",
+    "react-dom": "^16.12.0"
+  }
+}
