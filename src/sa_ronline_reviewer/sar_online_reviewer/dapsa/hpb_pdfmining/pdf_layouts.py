@@ -897,6 +897,9 @@ class Table:
                'base_matrix: %s' % (
                    self.pageid, self.table_no, self.bbox, self.base_matrix
                )
+    
+    def commandline_check_tabkle(self):
+        pass
 
     def table_to_excel(self, worksheet, start_row=1, start_col=1, **kwargs):
         """write the base matrix then merge and fill in content, all value is 1 or 0
@@ -1110,9 +1113,10 @@ class Table:
             else:
                 ta[row] = []
                 ta[row].append(fc.value)
+        print(ta)
         result = pd.DataFrame(ta)
         logging.info("page_to df now result is %s \n"%result)
-        return result
+        return result, ta
 
     @classmethod
     def get_tables(cls, objs, pageid, table_no=0, backup = None):

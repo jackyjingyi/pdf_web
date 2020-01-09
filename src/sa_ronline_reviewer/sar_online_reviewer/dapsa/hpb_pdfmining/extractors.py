@@ -1,10 +1,13 @@
 import time
 import logging
+import fitz
 import pandas as pd
-from .tag_keys import SKIP_KEYS, BEGIN_KEYS, INFO_KEYS, DATE_PATTERN, MONTH, PROTOCOLS, PATH
+from .tag_keys import SKIP_KEYS, BEGIN_KEYS, INFO_KEYS, DATE_PATTERN, MONTH, PROTOCOLS, PATH,BasicDict
 from .analyze_class import check_dict, keyword_modify, keyword_contains_in, resove_dict
 import string
 from datetime import datetime
+from operator import itemgetter
+from itertools import groupby
 import re
 from .mapper import predefine_, pdf_df_rename, get_protocol, Mapper
 import os
@@ -749,9 +752,178 @@ class PDFExtractor:
                     yield PageExtractor(layout=layout, pageid=p.pageid, cache=True)
 
 
+class PDFExtractorFitz:
+
+    def __init__(self, fname):
+        self.doc = fitz.open(fname)
+
+    def __iter__(self):
+        for i in range(len(self.doc)-100):
+            yield PageExtractorFitz( page_doc = self.doc[i]) 
+
+    def get_page(self, number):
+        return PageExtractorFitz(page_doc = self.doc[number])
+
+
+class PageExtractorFitz:
+    def __init__(self, page_doc):
+        """
+        page#: int 0 base
+        page: fitz.Page
+         number => page.number 
+         rect => page.rect | MediaBox  left top(0,0) right bottom(max, max)
+
+        """
+        self.page = page_doc
+        self._header = None
+        self._body = None
+        self._footer = None
+
+    @property
+    def header(self):
+        return self._header
+
+    @header.setter
+    def header(self, rate = 0.2):
+        # header is top 20% of the page
+        x0,y0,x1,y1 =  self.page.rect.x0, self.page.rect.y0, self.page.rect.x1, self.page.rect.y1 *rate
+        self._header = fitz.Rect(x0,y0,x1,y1).round()
+
+    @property
+    def body(self):
+        return self._body
+
+    @body.setter
+    def body(self, top = 0.2, bottom = 0.2):
+        x0,y0,x1,y1 =  self.page.rect.x0, self.page.rect.y1 * top, self.page.rect.x1, self.page.rect.y1 * (1-bottom)
+        self._body = fitz.Rect(x0,y0,x1,y1).round()
+    
+    @property
+    def footer(self):
+        return self._footer
+
+    @footer.setter
+    def footer(self, rate = 0.2):
+        x0,y0,x1,y1 =  self.page.rect.x0, self.page.rect.y0 * (1-rate), self.page.rect.x1, self.page.rect.y1
+        self._footer = fitz.Rect(x0,y0,x1,y1).round()
+            
+    def search_for(self, text, words):
+        rect_list = []
+        for w in words:
+          
+            if text.lower() in w[4].lower():
+                rect_list.append(w)
+              
+        return rect_list
+
+    def force_search(self, text, words):
+        pass
+        
+    def check_blocks(self, words, rect):
+        """
+        words => page.getText("block")
+        rect => Rect
+        """
+        # build my sublist of words contained in given rectangle
+        mywords = [w for w in words if fitz.Rect(w[:4]) in rect]
+
+        return mywords
+
+    def recover(self, words, rect):
+        """ Word recovery.
+
+        Notes:
+            Method 'getTextWords()' does not try to recover words, if their single
+            letters do not appear in correct lexical order. This function steps in
+            here and creates a new list of recovered words.
+        Args:
+            words: list of words as created by 'getTextWords()'
+            rect: rectangle to consider (usually the full page), check report number top 20% of the page
+        Returns:
+            List of recovered words. Same format as 'getTextWords', but left out
+            block, line and word number - a list of items of the following format:
+            [x0, y0, x1, y1, "word"]
+        """
+        # build my sublist of words contained in given rectangle
+        mywords = [w for w in words if fitz.Rect(w[:4]) in rect]
+
+        # sort the words by lower line, then by word start coordinate
+        mywords.sort(key=itemgetter(3, 0))  # sort by y1, x0 of word rectangle
+
+        # build word groups on same line
+        grouped_lines = groupby(mywords, key=itemgetter(3))
+
+        words_out = []  # we will return this
+
+        # iterate through the grouped lines
+        # for each line coordinate ("_"), the list of words is given
+        for _, words_in_line in grouped_lines:
+            for i, w in enumerate(words_in_line):
+                if i == 0:  # store first word
+                    x0, y0, x1, y1, word = w[:5]
+                    continue
+
+                r = fitz.Rect(w[:4])  # word rect
+
+                # Compute word distance threshold as 20% of width of 1 letter.
+                # So we should be safe joining text pieces into one word if they
+                # have a distance shorter than that.
+                threshold = r.width / len(w[4]) / 5
+                if r.x0 <= x1 + threshold:  # join with previous word
+                    word += w[4]  # add string
+                    x1 = r.x1  # new end-of-word coordinate
+                    y0 = max(y0, r.y0)  # extend word rect upper bound
+                    continue
+
+                # now have a new word, output previous one
+                words_out.append([x0, y0, x1, y1, word])
+
+                # store the new word
+                x0, y0, x1, y1, word = w[:5]
+
+            # output word waiting for completion
+            words_out.append([x0, y0, x1, y1, word])
+
+        return words_out
+
+class Searcher(BasicDict):
+    def __iter__(self, idx, key):
+        super().__init__(idx = idx, key= key)
+
+    def page_search_for(self, page, flag = 1):
+        """
+        flag == 1, block search
+        """
+        wordsout = []
+        if flag == 1:
+            words = page.page.getTextWords()
+            print("words are here", words)
+        if len(self.keywords) >0:
+            # keywords exits
+            if self.bbox:
+                # bbox exits    
+                search_area = fitz.Rect(self.bbox[:])
+                words = page.check_blocks(words = words, rect = search_area)
+
+            for text in self.keywords:  # [ str, str]
+                wordsout += page.search_for(text = text, words = words)
+        if len(wordsout) > 0:
+            if self.force:
+                for g in wordsout:
+                    if any([p.lower() in g[4].lower() for p in self.force]):            
+                        return set(wordsout)
+        if self.force:
+            for text in self.force:
+                print(text)
+                wordsout += page.search_for(text = text, words = words)
+        else:
+            logging.warning("Sorry no force search items & could not find matched items for {%s}" % self.item)
+        return set(wordsout) 
+        
+
 if __name__ == '__main__':
     start_timestamp = time.time()
-    path = PATH['path']
+    """path = PATH['path']
     sub_path = PATH['sub_path'][5]
 
     doc = Document(path=path, sub_path=sub_path, doc_id=8)
@@ -799,7 +971,7 @@ if __name__ == '__main__':
 
     wb.save(os.getcwd() + '/excels/' + tag_name + 'newly' + '.xlsx')
     append_df_to_excel(os.getcwd() + '/excels/' + tag_name + 'newly' + '.xlsx', cat.df, sheet_name="result")
-    end_time = time.time()
-
-
+    end_time = time.time()"""
+    fname = os.getcwd()
+ 
 

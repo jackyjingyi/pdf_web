@@ -99,7 +99,7 @@ def check_dict(*args, **kwargs):
 
 if __name__ == '__main__':
 
-    from tag_keys import INFO_KEYS
+    from tag_keys import BASIC_INFO
 
     test_dict = {
         'key1': {'key2': {1: 'find me'}, },
@@ -107,15 +107,15 @@ if __name__ == '__main__':
     }
 
     kktest = resove_dict('key1', 'key2', 1, the_dict=test_dict, start=0)
-    print(kktest)  # find me
+    #print(kktest)  # find me
     kktest1 = resove_dict('keyx', the_dict=test_dict, start=0)
-    print(kktest1)  # [1,2,3]
+    #print(kktest1)  # [1,2,3]
 
-    done = check_dict('vendor name', item='Vender Name', the_dict=INFO_KEYS, start=0)
+    done = check_dict('force', item = 'TUV Rheinland',the_dict=BASIC_INFO[1], start=0)
     for do in done:
         print(do)
-    print(keyword_modify('Language -\n Quebec'))
-    print(re.sub('[\n\t]', '', ' '.join(keyword_modify('Language -\n Quebec').lower().split())))
-    sh = keyword_contains_in(keyword='vEnder name', target_str='Vender Name: Beifa Group Co.,Ltd \n \n \n \n \n \n \n',
-                             split_mark=":", title=True)
-    print(sh)
+    #print(keyword_modify('Language -\n Quebec'))
+    #print(re.sub('[\n\t]', '', ' '.join(keyword_modify('Language -\n Quebec').lower().split())))
+    #sh = keyword_contains_in(keyword='vEnder name', target_str='Vender Name: Beifa Group Co.,Ltd \n \n \n \n \n \n \n',
+    #                         split_mark=":", title=True)
+    #print(sh)

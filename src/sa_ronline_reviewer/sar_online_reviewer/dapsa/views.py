@@ -27,7 +27,7 @@ from .hpb_pdfmining.tag_keys import SKIP_KEYS, BEGIN_KEYS, INFO_KEYS, DATE_PATTE
 from .hpb_pdfmining.mapper import predefine_, pdf_df_rename, get_protocol, Mapper
 from .hpb_pdfmining.analyze_class import check_dict, keyword_modify, keyword_contains_in, resove_dict
 from .hpb_pdfmining.main_decorators import timeout, check_first_page_with_dict, check_not_first_page_with_dict, controller
-from .hpb_pdfmining.extractors import FirstPageInfo, user_select_from_list, PDFExtractor, PageExtractor, checkpointsvaliadation, append_df_to_excel, find_key, find_right_neightbors
+from .hpb_pdfmining.extractors import FirstPageInfo, user_select_from_list, PDFExtractor, PageExtractor, checkpointsvaliadation, append_df_to_excel, find_key, find_right_neightbors, PDFExtractorFitz, PageExtractorFitz, Searcher
 from .models import MiningLog, TestDoc, SamplePool, Protocols, Protocol
 from .forms import TestDocForm
 from django.views.decorators.csrf import csrf_protect
@@ -41,7 +41,7 @@ import uuid
 """
 class to render or serilize the output to json and then pass it to frontend
 1. input :  pdf address reference
-2. 
+2.
 """
 
 
@@ -142,20 +142,85 @@ def pdfmain(request, **kargs):
     if document:
         results = pdf_analysis_main(document)
         print(results)
-        if results['protocol']:
-            current_protocol = results['protocol']
+        if isinstance(results, set) and len(results) > 0:
+
+            # if results['protocol']:
+            current_protocol = [w[4] for w in results]
             # check if the protocol in db
-            if current_protocol in [str(i.protocol_name) for i in Protocols.objects.all()]:
-                p_obj = Protocols.objects.get(protocol_name=current_protocol)
+            # for j in current_protocol:
+            print(current_protocol)
+
+            pool = [str(i.protocol_name).lower()
+                    for i in list(Protocols.objects.all())]
+            print(pool)
+            t = [current_protocol[0].lower() in p for p in pool]
+            idx = int(re.findall(r'\d+',current_protocol[0].lower())[0])
+            print(idx)
+            if isinstance(idx, int):
+                
+                p_obj = Protocols.objects.filter(
+                    amazon_number=idx)[0]
                 # corresponding protocol items
-                protcol_item = Protocol.objects.filter(protocol_name_id=p_obj)
+                print(p_obj.protocol_name)
+                protcol_item = Protocol.objects.filter(
+                    protocol_name_id= p_obj)
             else:
                 # for check
                 p_obj = Protocols.objects.get(amazon_number=21)
-                protcol_item = Protocol.objects.filter(protocol_name_id=p_obj)
-            return render(request, 'dapsa/analysis.html', {'document': document, 'dict': results, 'p_name':p_obj,'items': protcol_item})
+                protcol_item = Protocol.objects.filter(
+                    protocol_name_id=p_obj)
+            # protocol report used
+            results = {}
+            results['protocol'] = p_obj.protocol_name
+            conclusions = conclusion_extraction(doc=document, protocol=p_obj.id)
+            return render(request, 'dapsa/analysis.html', {'document': document, 'dict': results,'conclusions':conclusions, 'p_name': p_obj, 'items': protcol_item})
         # return render(request, 'dapsa/analysis.html', {'document': document, 'dict': results})
     return render(request, 'dapsa/analysis.html', {'document': document})
+
+
+def conclusion_extraction(*args, **kwargs):
+    """
+        **kwargs :
+            doc => filefield
+            protocol => int : id of protocols 
+
+
+    """
+    doc = kwargs['doc']
+    protocol = kwargs['protocol']
+    fp = doc.docfile.open('rb')
+    pdf = PDFExtractor(fp)
+
+    # testing mode set start page 
+    pdf.begin_page = 8
+    # start from 'start' page, pdf_iter is a generator, generate "PageExtractor" instance
+    pdf_iter = pdf.process_page() 
+    ### testing : only process 9 pages start from begin page
+    count = 0
+    while count < 1:
+        page = next(pdf_iter)
+        # PageExtractor call() {
+        #   1.detect points from ltrect or ltline
+        #   2.clustering points into Cluster objects
+        #   3.establish cells from clusters
+        #   4.establish tables by cells
+        # }
+        page()
+        ## To get conclusion table, the perviouse move is get the last table object
+        # in a page, however, we can transform it into if table in fitz.Rect(page.body)
+        count+=1
+        print(page.tables)
+        for table in page.tables:
+            ## df is a pd.dataframe, first column should be amazon speck number
+            # because cornerstone protocols are simplier than TUV protocols, 
+            # new mapping function can simply mapping with spec number to identifiy a record
+
+            df = table.table_to_df()
+            print(df)
+        conclusion_table = page.tables[-1].table_to_df()[1]  # 1 is list which is the source of df
+        
+    
+    return conclusion_table
 
 
 def secret_page_protocol_audit(request):
@@ -176,10 +241,39 @@ def pdf_analysis_main(doc):
     # start step2, display chosen protocol
     # analyzing and mapping , change the mapped protocol records dynamically
     #
-    fp = doc.docfile.open('rb')
-    pdf = PDFExtractor(fp)
-    basicinfor = pdf.collect_first_page_info()
-    return basicinfor
+    print(doc.docfile.path)
+    doc = PDFExtractorFitz(doc.docfile.path)
+
+    # test for iter page
+    """
+    for page in doc.__iter__():
+        p_list = page.page.getTextWords()
+        for item in p_list:
+            print(item)
+        p_list = page.recover(words=p_list,rect =page.page.rect )
+        for item in p_list:
+            print(item)
+            """
+    # test for get page
+    page = doc.get_page(0)
+    p_list = page.page.getTextWords()
+    p_block = page.page.getText("blocks")
+
+    print(page.page.rect)
+    page.body = 0.3
+    page.header = 0.2
+    p_list_header = page.recover(words=p_list, rect=page.header)
+
+    for item in p_list_header:
+        print(item)
+    p_list_block_header = page.check_blocks(words=p_block, rect=page.header)
+    for item in p_list_block_header:
+        print(item)
+    k = page.search_for(text="report", words=p_list_block_header)
+    searcher = Searcher(idx=0, key="protocol")
+    results = searcher.page_search_for(flag=1, page=page)
+
+    return results
 
 
 class PDFExtractionView(View):

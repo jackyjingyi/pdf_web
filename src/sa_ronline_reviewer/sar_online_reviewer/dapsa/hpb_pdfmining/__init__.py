@@ -1,4 +1,4 @@
-from .tag_keys import BEGIN_KEYS, END_KEYS, SKIP_KEYS, INFO_KEYS, DATE_PATTERN, FAILURE_KEYS, FAILURE_SUMMARY, MONTH, PROTOCOLS, PATH, COUNTRY_DICT, COUNTRY_LIST
+from .tag_keys import BEGIN_KEYS, END_KEYS, SKIP_KEYS, INFO_KEYS, DATE_PATTERN, FAILURE_KEYS, FAILURE_SUMMARY, MONTH, PROTOCOLS, PATH, COUNTRY_DICT, COUNTRY_LIST,BasicDict
 from .pdf_layouts import approxiamtion, close_enough, inside, find_next_neighbor, Point, Cluster, Cell, Table
 from .main_decorators import check_first_page_with_dict, check_not_first_page_with_dict, timeout, controller
 from .mapper import predefine_, pdf_df_rename, get_protocol, Mapper

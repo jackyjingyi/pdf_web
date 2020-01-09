@@ -1,0 +1,213 @@
+.
+├── dapsa
+│   ├── admin.py
+│   ├── apps.py
+│   ├── forms.py
+│   ├── hpb_pdfmining
+│   │   ├── analyze_class.py
+│   │   ├── Document_simulation.py
+│   │   ├── excel_styles.py
+│   │   ├── extractors.py
+│   │   ├── __init__.py
+│   │   ├── main_controller.py
+│   │   ├── main_decorators.py
+│   │   ├── mapper.py
+│   │   ├── pdf_layouts.py
+│   │   ├── protocolpreparation
+│   │   │   ├── check_protocol.py
+│   │   │   └── protocol_preprocess.py
+│   │   └── tag_keys.py
+│   ├── __init__.py
+│   ├── migrations
+│   │   ├── 0001_initial.py
+│   │   ├── 0002_auto_20200103_1716.py
+│   │   ├── 0003_protocol_inner_id.py
+│   │   ├── 0004_auto_20200103_1831.py
+│   │   ├── 0005_auto_20200103_1843.py
+│   │   ├── 0006_auto_20200103_1919.py
+│   │   ├── 0007_auto_20200104_1449.py
+│   │   ├── __init__.py
+│   ├── models.py
+│   ├── static
+│   │   └── dapsa
+│   │       ├── css
+│   │       │   └── dapsa_analysis.css
+│   │       ├── images
+│   │       └── js
+│   │           └── analysis.js
+│   ├── templates
+│   │   ├── base2.html
+│   │   └── dapsa
+│   │       ├── analysis.html
+│   │       ├── results.html
+│   │       ├── tasks.html
+│   │       └── upload.html
+│   ├── tests.py
+│   ├── urls.py
+│   └── views.py
+├── db.sqlite3
+├── frontend
+│   ├── admin.py
+│   ├── apps.py
+│   ├── __init__.py
+│   ├── migrations
+│   │   ├── __init__.py
+│   │   └── __pycache__
+│   │       └── __init__.cpython-36.pyc
+│   ├── models.py
+│   ├── __pycache__
+│   │   ├── admin.cpython-36.pyc
+│   │   ├── __init__.cpython-36.pyc
+│   │   └── models.cpython-36.pyc
+│   ├── src
+│   │   ├── conmponents
+│   │   │   └── App.js
+│   │   └── index.js
+│   ├── static
+│   │   └── frontend
+│   ├── templates
+│   │   └── frontend
+│   │       └── index.html
+│   ├── tests.py
+│   └── views.py
+├── list.txt
+├── log.txt
+├── manage.py
+├── media
+│   ├── reports
+│   │   ├── D012000
+│   │   │   └── 0419747656_1574912155_50296325_002f_Picnic_blanket_VT.pdf
+│   │   ├── D012050
+│   │   │   ├── 0418687629_1574327810_50281688_003_Lightning_to_USB_A_Cable_-_MFi_Certified__VT.pdf
+│   │   │   └── 0421474597_1576051021_50240508-003F_TR_report_-_AmazonBasics_Neoprene_Dumbbells.pdf
+│   │   ├── D012065
+│   │   │   ├── 0191919541_1558061848_VT-Amazon-0168114318a_001f-160GSM_YD_Flannel.pdf
+│   │   │   ├── 0405155331_1564031582_GZHT02160488S1_Two-Tone_furniture_covers.pdf
+│   │   │   └── 0418836525_1574321183_50295739_002f_AmazonBasics_Cell_Phone_Stand_VT_report.pdf
+│   │   ├── D012066
+│   │   │   ├── 0405562769_1564381760_190708011SZN-001_Security.pdf
+│   │   │   ├── 0410125007_1567671460_190715002SZN-001R2_Security.pdf
+│   │   │   ├── 0414627790_1571624941_190701331SHA-001_A1.pdf
+│   │   │   └── 0422816038_1576854157_GZHT02223532S2.pdf
+│   │   ├── D012067
+│   │   │   ├── 0415145908_1571918634_SZHH01398843_-_AmazonBasics_Resistance_and_Pull_Up_Band.pdf
+│   │   │   ├── 0421151863_1575963112_168140356_001Rv1_VT19_SZ-Enameled_Cast_Iron_Dutch__dDmVcoA.pdf
+│   │   │   └── 3-PL_ART_SUPPLIES.xlsx
+│   │   ├── D012068
+│   │   │   ├── 0418836525_1574321183_50295739_002f_AmazonBasics_Cell_Phone_Stand_VT_report.pdf
+│   │   │   ├── 0418837259_1574321931_50307490_001_USB_C_Car_Charger__VT_report.pdf
+│   │   │   └── 0421492355_1576059167_50315191_002_VT19_GZ_AmazonBasics_Small_Animal_Habitat_P.pdf
+│   │   ├── PL123
+│   │   │   ├── 4-19-6.pdf
+│   │   │   ├── 5-19-6.pdf
+│   │   │   └── 5-29-5.pdf
+│   │   ├── PL1234
+│   │   │   └── 4-14-5.pdf
+│   │   ├── PL2100
+│   │   │   ├── 50324221_001.pdf
+│   │   │   ├── 53193120042.pdf
+│   │   │   ├── KORT19092913.pdf
+│   │   │   ├── protocol_clean_step2--Corrected_-_Copy1_Kv5euex.xlsx
+│   │   │   ├── protocol_clean_step2--Corrected_-_Copy1_OJp3f5x.xlsx
+│   │   │   ├── protocol_clean_step2--Corrected_-_Copy1_WRDho9e.xlsx
+│   │   │   ├── protocol_clean_step2--Corrected_-_Copy1_WYhmtBz.xlsx
+│   │   │   ├── protocol_clean_step2--Corrected_-_Copy1.xlsx
+│   │   │   ├── protocol_clean_step2--Corrected_-_Copy1_zY9mYBw.xlsx
+│   │   │   └── sampling1225_339.xlsx
+│   │   ├── PL222
+│   │   │   └── sampling1225_339.xlsx
+│   │   ├── PL8547
+│   │   │   └── 5-29-5.pdf
+│   │   ├── pl900
+│   │   │   ├── 244186114a_001.pdf
+│   │   │   ├── protocols.xlsx
+│   │   │   └── sampling1225_339.xlsx
+│   │   ├── PL9091
+│   │   │   ├── 4-21-6.pdf
+│   │   │   ├── 4-21-6_vfrLWE8.pdf
+│   │   │   └── sampling1225_339.xlsx
+│   │   ├── PL919
+│   │   │   └── 6-19-6-.pdf
+│   │   └── protocols
+│   │       ├── protocols_6BI0wxD.xlsx
+│   │       ├── protocolssv5_9bj5V5D.xlsx
+│   │       ├── protocolssv5_EUueWbO.xlsx
+│   │       ├── protocolssv5_kkSvqYU.xlsx
+│   │       ├── protocolssv5_LXE6GNh.xlsx
+│   │       ├── protocolssv5_Ncrzuds.xlsx
+│   │       ├── protocolssv5_nWuGxY7.xlsx
+│   │       ├── protocolssv5_WyHDCeO.xlsx
+│   │       ├── protocolssv5.xlsx
+│   │       ├── protocolssv5_Zc5rxCT.xlsx
+│   │       └── protocols.xlsx
+│   └── test
+│       ├── 4-20-5_mWUKFTo.pdf
+│       ├── 4-20-5.pdf
+│       ├── 4-20-5_TkWDAnm.pdf
+│       ├── 4-21-6.pdf
+│       ├── 5-19-6.pdf
+│       └── sampling1225_339.xlsx
+├── mydata.db
+├── sar_online_reviewer
+│   ├── asgi.py
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   ├── __init__.cpython-36.pyc
+│   │   ├── settings.cpython-36.pyc
+│   │   ├── urls.cpython-36.pyc
+│   │   └── wsgi.cpython-36.pyc
+│   ├── settings.py
+│   ├── urls.py
+│   └── wsgi.py
+├── static
+│   ├── css
+│   │   ├── bootstrap.css
+│   │   ├── bootstrap.css.map
+│   │   ├── bootstrap-editable.css
+│   │   ├── bootstrap-grid.css
+│   │   ├── bootstrap-grid.css.map
+│   │   ├── bootstrap-grid.min.css
+│   │   ├── bootstrap-grid.min.css.map
+│   │   ├── bootstrap.min.css
+│   │   ├── bootstrap.min.css.map
+│   │   ├── bootstrap-reboot.css
+│   │   ├── bootstrap-reboot.css.map
+│   │   ├── bootstrap-reboot.min.css
+│   │   ├── bootstrap-reboot.min.css.map
+│   │   ├── font-awesome.min.css
+│   │   └── style.css
+│   ├── images
+│   │   ├── 91.jpg
+│   │   ├── architecture.jpg
+│   │   └── backgroud.gif
+│   ├── img
+│   │   ├── clear.png
+│   │   ├── glyphicons-halflings.png
+│   │   └── loading.gif
+│   └── js
+│       ├── bootstrap.bundle.js
+│       ├── bootstrap.bundle.js.map
+│       ├── bootstrap.bundle.min.js
+│       ├── bootstrap.bundle.min.js.map
+│       ├── bootstrap.js
+│       ├── bootstrap.js.map
+│       ├── bootstrap.min.js
+│       ├── bootstrap.min.js.map
+│       ├── jquery-3.3.1.slim.min.js
+│       └── popper.min.js
+└── templates
+    ├── base.html
+    ├── home.html
+    ├── registration
+    │   ├── login.html
+    │   ├── password_change_done.html
+    │   ├── password_change_form.html
+    │   ├── password_reset_complete.html
+    │   ├── password_reset_confirm.html
+    │   ├── password_reset_done.html
+    │   ├── password_reset_form.html
+    │   └── signup.html
+    ├── secret_page.html
+    └── secret_page_protocol.html
+
+189 directories, 378 files
