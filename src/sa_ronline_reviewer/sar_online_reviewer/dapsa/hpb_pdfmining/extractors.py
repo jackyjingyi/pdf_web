@@ -191,9 +191,10 @@ def find_right_neightbors(media_bbox, layout, obj, width=3, pts=0.2, position='b
 
 class PageExtractor:
 
-    def __init__(self, layout, pageid, cache=True):
+    def __init__(self, layout, pageid,page_number, cache=True):
         self.layout = layout
         self.pageid = pageid
+        self.page_number = page_number
         self.text_box = []
         self.cache = cache
         self.body = None
@@ -627,8 +628,8 @@ class PDFExtractor:
         logging.debug("Page Dict: %s" % self.PAGE_DICT)
         logging.debug("Page Dict reverse : %s" % self.DICT_PAGE)
 
-
     def collect_first_page_info(self):
+        # changing and no longer used 
         temp_laparams = LAParams(line_margin=0.3, char_margin=1.5, all_texts=True, boxes_flow=0.5)
         temp_pageagg = PDFPageAggregator(self.rsrcmgr, laparams=temp_laparams)
         temp_interpreter = PDFPageInterpreter(self.rsrcmgr, temp_pageagg)
@@ -698,14 +699,14 @@ class PDFExtractor:
                         if p.pageid == self.PAGE_DICT[tp]:
                             self.interpreter.process_page(p)
                             layout = self.pageagg.get_result()
-                            yield PageExtractor(layout=layout, pageid=p.pageid, cache=True)
+                            yield PageExtractor(layout=layout, pageid=p.pageid,page_number = self.DICT_PAGE[p.pageid], cache=True)
             else:
                 start = self.begin_page            
                 for p in PDFPage.get_pages(self.fp):
                     if self.DICT_PAGE[p.pageid] >= start:
                         self.interpreter.process_page(p)
                         layout = self.pageagg.get_result()
-                        yield PageExtractor(layout=layout, pageid=p.pageid, cache=True)
+                        yield PageExtractor(layout=layout, pageid=p.pageid, page_number = self.DICT_PAGE[p.pageid],cache=True)
                     else:
                         pass
 
@@ -732,24 +733,24 @@ class PDFExtractor:
                     if self.DICT_PAGE[p.pageid] >= start:
                         self.interpreter.process_page(p)
                         layout = self.pageagg.get_result()
-                        yield PageExtractor(layout=layout, pageid=p.pageid, cache=True)
+                        yield PageExtractor(layout=layout, pageid=p.pageid, page_number = self.DICT_PAGE[p.pageid],cache=True)
                 elif start and end:
                     if start <= self.DICT_PAGE[p.pageid] <= end:
                         self.interpreter.process_page(p)
                         layout = self.pageagg.get_result()
-                        yield PageExtractor(layout=layout, pageid=p.pageid, cache=True)
+                        yield PageExtractor(layout=layout, pageid=p.pageid,page_number = self.DICT_PAGE[p.pageid], cache=True)
                 elif not start and end:
                     if 1 <= self.DICT_PAGE[p.pageid] <= end:
                         self.interpreter.process_page(p)
                         layout = self.pageagg.get_result()
-                        yield PageExtractor(layout=layout, pageid=p.pageid, cache=True)
+                        yield PageExtractor(layout=layout, pageid=p.pageid,page_number = self.DICT_PAGE[p.pageid],cache=True)
         else:
             assert isinstance(single, int), "if not start , end , single must be given"
             for p in PDFPage.get_pages(self.fp):
                 if self.DICT_PAGE[p.pageid] == single:
                     self.interpreter.process_page(p)
                     layout = self.pageagg.get_result()
-                    yield PageExtractor(layout=layout, pageid=p.pageid, cache=True)
+                    yield PageExtractor(layout=layout, pageid=p.pageid,page_number = self.DICT_PAGE[p.pageid], cache=True)
 
 
 class PDFExtractorFitz:

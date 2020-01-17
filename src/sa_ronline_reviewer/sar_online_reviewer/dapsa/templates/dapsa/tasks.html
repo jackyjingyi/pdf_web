@@ -17,7 +17,7 @@
                 </div>
                 <div class="col">
                     <button type="button" class="list-group-item list-group-item-action">
-                        <a href="{% url 'pdfmain' document.caseid %}">
+                        <a href="{% url 'pdfmain' task_type asin_number document.caseid %}">
                             {{ document.filename }}
                         </a>
                     </button>

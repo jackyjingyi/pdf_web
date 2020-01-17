@@ -14,7 +14,7 @@ from pdfminer.layout import LAParams, LTChar, LTCurve, LTTextLine, LTText, LTTex
     LTTextBoxHorizontal, LTPage
 from pdfminer.converter import PDFPageAggregator
 from pdfminer.pdfpage import PDFPage
-from datetime import datetime
+import datetime
 from openpyxl import Workbook, load_workbook
 from openpyxl.utils import get_column_letter
 from django.shortcuts import render, redirect
@@ -28,7 +28,7 @@ from .hpb_pdfmining.mapper import predefine_, pdf_df_rename, get_protocol, Mappe
 from .hpb_pdfmining.analyze_class import check_dict, keyword_modify, keyword_contains_in, resove_dict
 from .hpb_pdfmining.main_decorators import timeout, check_first_page_with_dict, check_not_first_page_with_dict, controller
 from .hpb_pdfmining.extractors import FirstPageInfo, user_select_from_list, PDFExtractor, PageExtractor, checkpointsvaliadation, append_df_to_excel, find_key, find_right_neightbors, PDFExtractorFitz, PageExtractorFitz, Searcher
-from .models import MiningLog, TestDoc, SamplePool, Protocols, Protocol
+from .models import MiningLog, TestDoc, SamplePool, Protocols, Protocol, AsinAssign
 from .forms import TestDocForm
 from django.views.decorators.csrf import csrf_protect
 from django.contrib.auth.models import User
@@ -41,8 +41,10 @@ import uuid
 """
 class to render or serilize the output to json and then pass it to frontend
 1. input :  pdf address reference
-2.
+2. 
 """
+today_min = datetime.datetime.combine(datetime.date.today(), datetime.time.min)
+today_max = datetime.datetime.combine(datetime.date.today(), datetime.time.max)
 
 
 def home(request):
@@ -66,18 +68,39 @@ def signup(request):
 
 
 @login_required
-def secret_page(request):
-    asins = SamplePool.objects.filter(ifpick="pick")
+def secret_page(request, *args, **kwargs):
+    _temp = {
+        'SPB': '1',
+        'HPB': '2',
+        'CPB': '3',
+    }
+    task_type = kwargs['task_type']
+    user = request.user
+    # check if
+    SamplePool.assign_asin(number=8, task_type=task_type)
+    asins = AsinAssign.objects.filter(
+        assignee=request.user, assign_date__range=(today_min, today_max), task_type=_temp[task_type])
+    print(asins)
+    if len(asins) == 0:
+        # new user
+        SamplePool.assign_single(number=8, user=user, task_type=task_type)
+        asins = AsinAssign.objects.filter(
+            assignee=request.user, assign_date__range=(today_min, today_max), task_type=_temp[task_type])
+    asins = [i.asin for i in asins]
 
-    return render(request, 'secret_page.html', {'asins': asins})
+    return render(request, 'secret_page.html', {'asins': asins, 'task_type': task_type})
 
 
 class SecretPage(LoginRequiredMixin, TemplateView):
     template_name = 'secret_page.html'
 
 
-def tasks(request):
+def tasks(request, asin_number, task_type, *args, **kwargs):
     # Handle file upload
+    asin_number = asin_number
+    task_type = task_type
+    print(asin_number)
+    print(task_type)
     if request.method == 'POST':
 
         form = TestDocForm(request.POST, request.FILES)
@@ -85,7 +108,7 @@ def tasks(request):
             temp_caseid = str(uuid.uuid4())
 
             newdoc = TestDoc(caseid=temp_caseid, pl=request.POST['pl'],
-                             docfile=request.FILES['docfile'], uploaded_by=request.user)  # .save()
+                             docfile=request.FILES['docfile'], uploaded_by=request.user, asin=asin_number)  # .save()
 
             newdoc.save()
             #excel_file = request.FILES['docfile']
@@ -123,47 +146,43 @@ def tasks(request):
             #    print(len(Protocol.objects.all()))
             # except:
             #    f.writelines([str(i.value)+',' for i in row]+['\n'])
-            return redirect(reverse('tasks'))
+            return redirect(reverse('tasks', args=[task_type, asin_number]))
     else:
         form = TestDocForm()  # A empty, unbound form
 
     # Load documents for the list page
-    documents = TestDoc.objects.all()
+    documents = TestDoc.objects.filter(asin=asin_number)
+
+    asin = SamplePool.objects.get(asin=asin_number)
 
     # Render list page with the documents and the form
-    return render(request, 'dapsa/tasks.html', {'documents': documents, 'form': form})
+    return render(request, 'dapsa/tasks.html', {'asin_number':asin_number, 'task_type':task_type,'documents': documents, 'asin': asin, 'form': form})
 
 
-def pdfmain(request, **kargs):
-    caseid = request.path.split('/')[-2]
-    print(caseid)
+def pdfmain(request, asin_number, task_type, caseid,*args, **kargs):
+    asin_number = asin_number
+    task_type =task_type
+    caseid = caseid
     document = TestDoc.objects.get(caseid=caseid)
-    print(document)
     if document:
         results = pdf_analysis_main(document)
-        print(results)
         if isinstance(results, set) and len(results) > 0:
-
-            # if results['protocol']:
             current_protocol = [w[4] for w in results]
-            # check if the protocol in db
-            # for j in current_protocol:
             print(current_protocol)
-
             pool = [str(i.protocol_name).lower()
                     for i in list(Protocols.objects.all())]
             print(pool)
             t = [current_protocol[0].lower() in p for p in pool]
-            idx = int(re.findall(r'\d+',current_protocol[0].lower())[0])
+            idx = int(re.findall(r'\d+', current_protocol[0].lower())[0])
             print(idx)
             if isinstance(idx, int):
-                
+
                 p_obj = Protocols.objects.filter(
                     amazon_number=idx)[0]
                 # corresponding protocol items
                 print(p_obj.protocol_name)
                 protcol_item = Protocol.objects.filter(
-                    protocol_name_id= p_obj)
+                    protocol_name_id=p_obj)
             else:
                 # for check
                 p_obj = Protocols.objects.get(amazon_number=21)
@@ -172,10 +191,15 @@ def pdfmain(request, **kargs):
             # protocol report used
             results = {}
             results['protocol'] = p_obj.protocol_name
-            conclusions = conclusion_extraction(doc=document, protocol=p_obj.id)
-            return render(request, 'dapsa/analysis.html', {'document': document, 'dict': results,'conclusions':conclusions, 'p_name': p_obj, 'items': protcol_item})
+            conclusions = conclusion_extraction(
+                doc=document, protocol=p_obj.id, begin=4, end=10)
+            (conclusion_dict, homeless_items, p_set) = mapping_protocols(
+                protcocol_set=[i for i in protcol_item], extract_list=conclusions)
+            print(conclusions)
+           
+            return render(request, 'dapsa/analysis.html', {'asin_number':asin_number,'task_type':task_type,'caseid':caseid,'document': document, 'dict': results, 'conclusions': conclusion_dict, 'p_name': p_obj, 'miss': p_set})
         # return render(request, 'dapsa/analysis.html', {'document': document, 'dict': results})
-    return render(request, 'dapsa/analysis.html', {'document': document})
+    return render(request, 'dapsa/analysis.html', {'asin_number':asin_number,'task_type':task_type,'document': document})
 
 
 def conclusion_extraction(*args, **kwargs):
@@ -183,21 +207,28 @@ def conclusion_extraction(*args, **kwargs):
         **kwargs :
             doc => filefield
             protocol => int : id of protocols 
-
+            begin => int: page to start analysis conclusion tables
+            end => int: page number to stop analysis
 
     """
+    # Point.purge()
+    # Cluster.purge()
+    # Cell.purge()
     doc = kwargs['doc']
     protocol = kwargs['protocol']
+    begin = kwargs['begin']
+    end = kwargs['end']
     fp = doc.docfile.open('rb')
     pdf = PDFExtractor(fp)
 
-    # testing mode set start page 
-    pdf.begin_page = 8
+    # testing mode set start page
+    pdf.begin_page = begin
     # start from 'start' page, pdf_iter is a generator, generate "PageExtractor" instance
-    pdf_iter = pdf.process_page() 
-    ### testing : only process 9 pages start from begin page
+    pdf_iter = pdf.process_page()
+    # testing : only process 9 pages start from begin page
     count = 0
-    while count < 1:
+    conclusion_table = []
+    while count < end - begin:
         page = next(pdf_iter)
         # PageExtractor call() {
         #   1.detect points from ltrect or ltline
@@ -206,21 +237,103 @@ def conclusion_extraction(*args, **kwargs):
         #   4.establish tables by cells
         # }
         page()
-        ## To get conclusion table, the perviouse move is get the last table object
+        # To get conclusion table, the perviouse move is get the last table object
         # in a page, however, we can transform it into if table in fitz.Rect(page.body)
-        count+=1
+        count += 1
         print(page.tables)
         for table in page.tables:
-            ## df is a pd.dataframe, first column should be amazon speck number
-            # because cornerstone protocols are simplier than TUV protocols, 
+            # df is a pd.dataframe, first column should be amazon speck number
+            # because cornerstone protocols are simplier than TUV protocols,
             # new mapping function can simply mapping with spec number to identifiy a record
 
             df = table.table_to_df()
             print(df)
-        conclusion_table = page.tables[-1].table_to_df()[1]  # 1 is list which is the source of df
-        
-    
+        # 1 is list which is the source of df [[str,str], []]
+        conclusion_table += [i + [page.page_number] for i in page.tables[-1].table_to_df()[1]]
+    # pdf purge
+
     return conclusion_table
+
+
+def mapping_protocols(protcocol_set, extract_list, *args, **kwargs):
+    """
+    no validation 
+    1. extract list possibly coming in page unit
+
+    """
+    print(extract_list)
+    def check_outcome(p, f, c):
+        if "pass" in p.lower():
+            return "pass"
+        elif "fail" in f.lower():
+            return "fail"
+        else:
+            return c
+
+    try:
+        assert len(protcocol_set) > 0, "empty protocol list"
+        assert len(extract_list) > 0, "empty extract list"
+    except AssertionError:
+        logging.warning("one of mapping list is empty")
+        return
+
+    results = {
+        'PASS': [],
+        'FAIL': [],
+        'NR': []
+    }
+    homeless_items = []
+    while len(extract_list) > 0:
+        _current_item = extract_list.pop(0)
+        if len(protcocol_set) == 0:
+            break
+        try:
+            _current_req = _current_item[0].strip()
+        except TypeError:
+            continue
+        _pass = _current_item[-4].strip()
+        _fail = _current_item[-3].strip()
+        _comment = _current_item[-2].strip()
+        print(_current_req, _pass, _fail, _comment)
+        if len(_current_req) > 0:
+            _end_point = check_outcome(_pass, _fail, _comment)
+            _re_item = re.findall(r'^[a-zA-Z]\d+', _current_req)
+            print(_re_item)
+            try:
+                #assert isinstance(_re_item, list), "Not a list"
+                assert any([i == _current_req for i in _re_item]
+                           ), "it might be No Spec"
+                # if with a spec number jump in to a for loop
+                for idx, p in enumerate(protcocol_set):
+                    # exact check
+                    if p.speck_number.lower() == _current_req.lower():
+                        if _end_point == "pass":
+                            results['PASS'].append((p, _current_item))
+                            del protcocol_set[idx]
+                            break
+                        elif _end_point == "fail":
+                            results['FAIL'].append((p, _current_item))
+                            del protcocol_set[idx]
+                            break
+                        else:
+                            results['NR'].append((p, _current_item))
+                            del protcocol_set[idx]
+                            break
+            except AssertionError:
+                # No Spec extracted items
+                logging.info("No spec pass it to homeless")
+                homeless_items.append(_current_item)
+        else:
+            continue
+
+    return (results, homeless_items, protcocol_set)
+
+
+def conclusion_check(request, asin_number,task_type,caseid,speck,*args, **kwargs):
+    
+    conclusions = request.GET.get("conclusions")
+    print(conclusions)
+    return render(request, 'dapsa/check.html',{'asin_number':asin_number,'task_type':task_type,'caseid':caseid,'speck':speck})
 
 
 def secret_page_protocol_audit(request):
@@ -272,7 +385,7 @@ def pdf_analysis_main(doc):
     k = page.search_for(text="report", words=p_list_block_header)
     searcher = Searcher(idx=0, key="protocol")
     results = searcher.page_search_for(flag=1, page=page)
-
+    print(results, type(results))
     return results
 
 

@@ -51,7 +51,7 @@
                     {% endfor %}
                 </div>
             </div>
-            <div class="row">
+            <!-- <div class="row">
                 <p>Extracting data for page : x </p>
                 <div class="table-responsive">
                     <table id="conclusion-table" class="table table-striped table-hover table-sm">
@@ -80,8 +80,8 @@
                     </table>
                 </div>
 
-            </div>
-            <div class="row">
+            </div> -->
+            <!-- <div class="row">
                 <p>conculsion table using : {{ p_name.protocol_name }}</p>
                 <div class="table-responsive">
                     <table id="conclusion-table" class="table table-striped table-hover table-sm">
@@ -93,10 +93,45 @@
                         <tbody>
                             {% for item in items %}
                             <tr>
-                                <td>{{ item.speck_number }}</td>
+                                <td><a>{{ item.speck_number }}</a></td>
                                 <td>{{ item.requirement_title }}</td>
                                 <td>90%</td>
                             </tr>
+                            {% empty %}
+                            <p>Empty</p>
+                            {% endfor %}
+                        </tbody>
+
+                    </table>
+                </div>
+
+            </div> -->
+            <div class="row">
+                <p>conculsion table using : {{ p_name.protocol_name }}</p>
+                <div class="table-responsive">
+                    <table id="conclusion-table" class="table table-striped table-hover table-sm">
+                        <thead>
+                            <th>Speck Number</th>
+                            <th>requirement_title</th>
+                            <th>Status</th>
+                            <th>Comments</th>
+                            <th>accurate rate</th>
+                        </thead>
+                        <tbody>
+                            {% for key, val in conclusions.items %}
+                            {% for v in val %}
+                            <tr>
+                                <td><a
+                                        href="{% url 'mapping_check' task_type asin_number caseid v.0.speck_number %}">{{ v.0.speck_number }}</a>
+                                </td>
+                                <td>{{ v.0.requirement_title }}</td>
+                                <td>{{ key }}</td>
+                                <td>{{ v.1 }}</td>
+                                <td>100%</td>
+                            </tr>
+                         
+                            {% endfor %}
+
                             {% empty %}
                             <p>Empty</p>
                             {% endfor %}

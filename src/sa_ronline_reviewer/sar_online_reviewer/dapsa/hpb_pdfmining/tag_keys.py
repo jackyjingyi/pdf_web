@@ -73,7 +73,7 @@ BASIC_INFO = [
     },
     {
         'item': 'protocol',
-        'keywords': ['ax'],
+        'keywords': [],
         'force': ['PL_LUGGAGE',
                   'PL_Mattress_Crib_Infant',
                   'PL_Mattress_Pads',
