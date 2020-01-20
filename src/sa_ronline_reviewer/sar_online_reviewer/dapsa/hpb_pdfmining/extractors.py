@@ -887,8 +887,9 @@ class PageExtractorFitz:
 
         return words_out
 
+
 class Searcher(BasicDict):
-    def __iter__(self, idx, key):
+    def __init__(self, idx, key):
         super().__init__(idx = idx, key= key)
 
     def page_search_for(self, page, flag = 1):

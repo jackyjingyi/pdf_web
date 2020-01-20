@@ -211,9 +211,9 @@ def conclusion_extraction(*args, **kwargs):
             end => int: page number to stop analysis
 
     """
-    # Point.purge()
-    # Cluster.purge()
-    # Cell.purge()
+    Point.purge()
+    Cluster.purge()
+    Cell.purge()
     doc = kwargs['doc']
     protocol = kwargs['protocol']
     begin = kwargs['begin']
