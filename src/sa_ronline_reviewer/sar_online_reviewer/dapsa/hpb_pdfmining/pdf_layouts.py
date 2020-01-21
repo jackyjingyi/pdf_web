@@ -258,6 +258,15 @@ class Cluster:
     it should be a graph data type and
     the represent value should be the
     centre of the cluster
+    {
+        'session id (uuid)': {
+            'pageid': [point1,point2]
+        },
+        'session id (uuid)': {
+            'pageid': [point1,point2]
+        }
+    }
+
     """
     pageCluster = {}
     pageSortedClusters = {}
@@ -284,12 +293,22 @@ class Cluster:
         self.byte_mark = 0
 
     @classmethod
-    def purge(cls):
-        cls.pageCluster = {}
-        cls.pageSortedClusters = {}
-        cls.pageRoots = {}
-        cls.pageCells = {}
-        cls.starters = {}
+    def purge(cls, sessionid=None):
+        if sessionid:
+            try:
+                del cls.pageCluster[sessionid]
+                del cls.pageSortedClusters[sessionid]
+                del cls.pageRoots[sessionid]
+                del cls.pageCells[sessionid]
+                del cls.starters[sessionid]
+            except KeyError:
+                logging.warning("session {%s} is not in class" % sessionid)
+        else:
+            cls.pageCluster = {}
+            cls.pageSortedClusters = {}
+            cls.pageRoots = {}
+            cls.pageCells = {}
+            cls.starters = {}
 
     def same_cluster(self, other):
         # compare two clusters
@@ -389,7 +408,7 @@ class Cluster:
         print(self.cluster_id, self.s1_matrix)
 
     # need refine
-    def get_middle(self):
+    def get_middle(self,sessionid =None):
         # connect with other clusters
         for item in self.value:
             logging.info(" %s item is %s in %s", self.get_middle.__name__, item, self.value)
@@ -402,43 +421,77 @@ class Cluster:
                 logging.info(" %s checking  %s no children, ", self.get_middle.__name__, item)
 
         # O(n2) max 4*N N is all points in one page
-        for s in self.target_info:
-            found = False
-            for j in self.pageSortedClusters[self.pageid]:
-                if j != self:
-                    for m in range(len(s[1])):
-                        if s[1][m] in j.point_id:
-                            s[1][m] = (j.cluster_id, m)
-                            logging.info("s is %s, current points %s", s, self.point_id)
-                            found = True
-            if not found:
-                logging.warning("_________________________________________")
-                logging.warning("not found matched cluster for %s,", s)
-                logging.warning("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+        if sessionid:
+            for s in self.target_info:
+                found = False
+                for j in Cluster.pageSortedClusters[sessionid][self.pageid]:
+                    if j != self:
+                        for m in range(len(s[1])):
+                            if s[1][m] in j.point_id:
+                                s[1][m] = (j.cluster_id, m)
+                                logging.info("s is %s, current points %s", s, self.point_id)
+                                found = True
+                if not found:
+                    logging.warning("_________________________________________")
+                    logging.warning("not found matched cluster for %s,", s)
+                    logging.warning("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+        else:
+            for s in self.target_info:
+                found = False
+                for j in Cluster.pageSortedClusters[self.pageid]:
+                    if j != self:
+                        for m in range(len(s[1])):
+                            if s[1][m] in j.point_id:
+                                s[1][m] = (j.cluster_id, m)
+                                logging.info("s is %s, current points %s", s, self.point_id)
+                                found = True
+                if not found:
+                    logging.warning("_________________________________________")
+                    logging.warning("not found matched cluster for %s,", s)
+                    logging.warning("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
         self.set_s1_matrix()
         return
 
-    def net_up(self):
-        if self.s1_matrix[0][0] == 1:
-            self.colParent = Cluster.pageSortedClusters[self.pageid][self.s1_matrix[1][0][0]]
-        if self.s1_matrix[0][1] == 1:
-            self.rowChild = Cluster.pageSortedClusters[self.pageid][self.s1_matrix[1][1][0]]
-        if self.s1_matrix[0][2] == 1:
-            self.colChild = Cluster.pageSortedClusters[self.pageid][self.s1_matrix[1][2][0]]
-        if self.s1_matrix[0][3] == 1:
-            self.rowParent = Cluster.pageSortedClusters[self.pageid][self.s1_matrix[1][3][0]]
+    def net_up(self, sessionid = None):
+        if sessionid:
+            if self.s1_matrix[0][0] == 1:
+                self.colParent = Cluster.pageSortedClusters[self.pageid][self.s1_matrix[1][0][0]]
+            if self.s1_matrix[0][1] == 1:
+                self.rowChild = Cluster.pageSortedClusters[self.pageid][self.s1_matrix[1][1][0]]
+            if self.s1_matrix[0][2] == 1:
+                self.colChild = Cluster.pageSortedClusters[self.pageid][self.s1_matrix[1][2][0]]
+            if self.s1_matrix[0][3] == 1:
+                self.rowParent = Cluster.pageSortedClusters[self.pageid][self.s1_matrix[1][3][0]]
+        else:
+            if self.s1_matrix[0][0] == 1:
+                self.colParent = Cluster.pageSortedClusters[self.pageid][self.s1_matrix[1][0][0]]
+            if self.s1_matrix[0][1] == 1:
+                self.rowChild = Cluster.pageSortedClusters[self.pageid][self.s1_matrix[1][1][0]]
+            if self.s1_matrix[0][2] == 1:
+                self.colChild = Cluster.pageSortedClusters[self.pageid][self.s1_matrix[1][2][0]]
+            if self.s1_matrix[0][3] == 1:
+                self.rowParent = Cluster.pageSortedClusters[self.pageid][self.s1_matrix[1][3][0]]
 
     def do_detect(self):
         return sum(self.s1_matrix[0][1:3])
 
-    def do1(self):
+    def do1(self, sessionid = None):
+        if sessionid:
+            # row child judgement put outside this function
+            k = Cluster.pageSortedClusters[sessionid][self.pageid][self.s1_matrix[1][1][0]].cluster_id
+            m = Cluster.pageSortedClusters[sessionid][self.pageid][self.s1_matrix[1][1][0]].s1_matrix[1][0][0]
+            if m != -1:
+                return k
+            else:
+                return Cluster.pageSortedClusters[sessionid][self.pageid][k].do1()
         # row child judgement put outside this function
-        k = Cluster.pageSortedClusters[self.pageid][self.s1_matrix[1][1][0]].cluster_id
-        m = Cluster.pageSortedClusters[self.pageid][self.s1_matrix[1][1][0]].s1_matrix[1][0][0]
-        if m != -1:
-            return k
         else:
-            return Cluster.pageSortedClusters[self.pageid][k].do1()
+            k = Cluster.pageSortedClusters[self.pageid][self.s1_matrix[1][1][0]].cluster_id
+            m = Cluster.pageSortedClusters[self.pageid][self.s1_matrix[1][1][0]].s1_matrix[1][0][0]
+            if m != -1:
+                return k
+            else:
+                return Cluster.pageSortedClusters[self.pageid][k].do1()
 
     def do2(self, key):
         # row child judgement put outside this function
