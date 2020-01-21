@@ -811,10 +811,10 @@ class PageExtractorFitz:
     def search_for(self, text, words):
         rect_list = []
         for w in words:
-          
+            
             if text.lower() in w[4].lower():
                 rect_list.append(w)
-              
+
         return rect_list
 
     def force_search(self, text, words):
@@ -892,14 +892,16 @@ class Searcher(BasicDict):
     def __init__(self, idx, key):
         super().__init__(idx = idx, key= key)
 
-    def page_search_for(self, page, flag = 1):
+    def page_search_for(self, page, flag = 1, words=None):
         """
         flag == 1, block search
         """
         wordsout = []
-        if flag == 1:
+        if flag == 1 and not words:
             words = page.page.getTextWords()
-            print("words are here", words)
+            # print("words are here", words)
+        else:
+            words = words
         if len(self.keywords) >0:
             # keywords exits
             if self.bbox:
@@ -909,6 +911,7 @@ class Searcher(BasicDict):
 
             for text in self.keywords:  # [ str, str]
                 wordsout += page.search_for(text = text, words = words)
+            
         if len(wordsout) > 0:
             if self.force:
                 for g in wordsout:
@@ -916,7 +919,7 @@ class Searcher(BasicDict):
                         return set(wordsout)
         if self.force:
             for text in self.force:
-                print(text)
+                # print(text)
                 wordsout += page.search_for(text = text, words = words)
         else:
             logging.warning("Sorry no force search items & could not find matched items for {%s}" % self.item)

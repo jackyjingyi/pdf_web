@@ -1,60 +1,170 @@
 {% extends 'base.html' %}
 {% load crispy_forms_tags %}
+{% load sample_level %}
 {% block content %}
+<style type="text/css">
+    .header-fixed {
+        width: 100%
+    }
+
+    .header-fixed>thead,
+    .header-fixed>tbody,
+    .header-fixed>thead>tr,
+    .header-fixed>tbody>tr,
+    .header-fixed>thead>tr>th,
+    .header-fixed>tbody>tr>td {
+        display: block;
+    }
+
+    .header-fixed>tbody>tr:after,
+    .header-fixed>thead>tr:after {
+        content: ' ';
+        display: block;
+        visibility: hidden;
+        clear: both;
+    }
+
+    .header-fixed>tbody {
+        overflow-y: auto;
+        height: 390px;
+        overflow-x: hidden;
+    }
+
+    .header-fixed>tbody>tr>td,
+    .header-fixed>thead>tr>th {
+        width: 11.1%;
+        float: left;
+    }
+</style>
 
 <!-- List of uploaded documents -->
 <div class="container">
+    <div class="row">
+        {% if documents %}
+        <ul class="list-group">
+            {% for document in documents %}
+            <li class="list-group-item">
+                <div class="row">
+                    <div class="col-lg">
+                        <button type="button" class="list-group-item list-group-item-action">
+                            {{ document.pl }}
+                        </button>
+                    </div>
+                    <div class="col">
+                        
+                        <button type="button" class="list-group-item list-group-item-action">
+                            <a href="{{ document.docfile.url }}" target="blank">
+                                {{ document.filename }}
+                            </a>
+                        </button>
+                    </div>
+                    <div class="col">
 
-    {% if documents %}
-    <ul class="list-group">
-        {% for document in documents %}
-        <li class="list-group-item">
-            <div class="row">
-                <div class="col-lg">
-                    <button type="button" class="list-group-item list-group-item-action">
-                        {{ document.pl }}
-                    </button>
+                        <button type="button" class="list-group-item list-group-item-action">
+                            <a href="{% url 'pdfmain' task_type asin_number document.caseid %}">
+                                Start 
+                            </a>
+                        </button>
+                        
+                    </div>
+                    <div class="col">
+                        <button type="button" class="list-group-item list-group-item-action">
+                            Delete
+                        </button>
+                    </div>
+                
                 </div>
-                <div class="col">
-                    <button type="button" class="list-group-item list-group-item-action">
-                        <a href="{% url 'pdfmain' task_type asin_number document.caseid %}">
-                            {{ document.filename }}
-                        </a>
-                    </button>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p>No documents.</p>
+        {% endif %}
+    </div>
+    <div class="row">
+        <div id="upload_form" class="input-group mb-3">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div>
+                    {{ form|crispy }}
+                    <input type="submit" value="Upload" />
                 </div>
-                <div class="col">
-                    <button type="button" class="list-group-item list-group-item-action">
-                        Delete
-                    </button>
-                </div>
-            </div>
-        </li>
-        {% endfor %}
-    </ul>
-    {% else %}
-    <p>No documents.</p>
-    {% endif %}
-
-
-    <!-- Upload form. Note enctype attribute! 
-    <div class="input-group">
-        <div class="input-group-prepend">
-            <span class="input-group-text" id="inputGroupFileAddon01">Upload</span>
+            </form>
         </div>
-        <div class="custom-file">
-            <input type="file" class="custom-file-input" id="inputGroupFile01" aria-describedby="inputGroupFileAddon01">
-            <label class="custom-file-label" for="inputGroupFile01">Choose file</label>
+    </div>
+    <div class="row" id = "task-nav">
+        <div class="col">
+            <button type="button" class="list-group-item list-group-item-action">
+                I | these 
+            </button>
         </div>
-    </div> -->
+        <div class="col">
+            <button type="button" class="list-group-item list-group-item-action">
+                Need | are
+            </button>
+        </div>
+        <div class="col">
+            <button type="button" class="list-group-item list-group-item-action">
+                this | action
+            </button>
+        </div>
+        <div class="col">
+            <button type="button" class="list-group-item list-group-item-action">
+                become |buttons for
+            </button>
+        </div>
+        <div class="col">
+            <button type="button" class="list-group-item list-group-item-action">
+                smaller |the table
+            </button>
+        </div>
+    </div>
 
-    <div id="upload_form" class="input-group mb-3">
-        <form method="post" enctype="multipart/form-data">
-            {% csrf_token %}
-            <div>
-                {{ form|crispy }}
-                <input type="submit" value="Upload" />
-            </div>
-        </form>
+    <div id="hubbles-block" class="row" style="overflow: auto">
+        {% if hubbles %}
+        <table id="hubble-table" class="table table-hover table-sm header-fixed table-striped">
+            <caption>MFP Information</caption>
+
+            <thead>
+                <th>MFP</th>
+                <th>Vendor Code</th>
+                <th>Active Region</th>
+                <th>PO Approve</th>
+                <th>Approver</th>
+                <th>Date Approved</th>
+                <th>Escalation TT</th>
+                <th>Func</th>
+                <th>Action</th>
+            </thead>
+            <tbody>
+
+                {% for h in hubbles %}
+                <!-- {% with h.escalation_tt as tt %} -->
+                <tr>
+                    <td>{{ h.mfp }}</td>
+                    <td>{{ h.mfp_code }}</td>
+                    <td>{{ h.active_region }}</td>
+                    <td>{{ h.po_approve }}</td>
+                    <td>{{ h.approver }}</td>
+                    <td>{{ h.date_approved }}</td>
+                    <td><a href="https://tt.amazon.com/{{ h.escalation_tt|open_tt }}"
+                            target="_blank">{{ h.escalation_tt }}</a></td>
+                    <td>{{ h.regular_body }}</td>
+                    <td>
+                        <button type="button" class="list-group-item list-group-item-action">
+                            <a href="#">Delete</a>
+                        </button>
+                    </td>
+                </tr>
+                <!-- {% endwith %} -->
+                {% endfor %}
+
+            </tbody>
+        </table>
+        {% else %}
+        <h5>No related MFP information</h5>
+        {% endif %}
+
     </div>
 
 

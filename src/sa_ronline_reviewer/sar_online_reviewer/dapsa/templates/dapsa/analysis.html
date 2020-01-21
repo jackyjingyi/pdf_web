@@ -53,6 +53,9 @@
         float: left;
         overflow-x: auto;
     }
+    #mainframe{
+        height:900px;
+    }
 </style>
 
 <a href="{{ document.docfile.url }}"></a>
@@ -76,23 +79,42 @@
                     {% if value %}
                     <div>
                         <span>{{ key }}:</span>
-                        <a href="#" id="basic_item" class="basic_items" data-type="text" 
+                        <a href="#" id="basic_item" class="basic_items" data-type="text"
                             data-title="Enter ">{{ value }}</a>
                     </div>
                     {% else %}
                     <div>
                         <span>{{ key }}:</span>
-                        <a href="#" id="basic_item" class="basic_items" data-type="text" 
-                            data-title="Enter ">Enter {{ key }}</a>
+                        <a href="#" id="basic_item" class="basic_items" data-type="text" data-title="Enter ">Enter
+                            {{ key }}</a>
                     </div>
                     {% endif %}
                     {% endfor %}
                 </div>
             </div>
+            <div calss="row">
+                <div class="col">
+                    <div class="form-group">
+                        <label for="sel1">Select Protocol:</label>
+                        <select class="form-control" id="sel1">
+                            {% for p in all_protocols %}
+                            <option>{{ p }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div calss="col">
+                    <button><a href="#">Submit</a></button>
+                </div>
+                <div class="col custom-control custom-switch text-right">
+                    <input type="checkbox" class="custom-control-input" id="customSwitches" checked>
+                    <label class="custom-control-label" for="customSwitches">Failures only</label>
+                </div>
+            </div>
             <div class="row" style="overflow: auto">
-                <p>conculsion table using : {{ p_name.protocol_name }}</p>
-
-                <table id="conclusion-table" class="table table-hover table-sm header-fixed">
+                <table id="conclusion-table" class="table table-hover table-sm header-fixed table-striped">
 
                     <caption>Conclusion Table</caption>
                     <thead>
@@ -157,5 +179,5 @@
     </div>
 
 </div>>
-</div>
+
 {% endblock %}

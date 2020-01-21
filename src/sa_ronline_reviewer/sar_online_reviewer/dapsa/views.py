@@ -28,7 +28,7 @@ from .hpb_pdfmining.mapper import predefine_, pdf_df_rename, get_protocol, Mappe
 from .hpb_pdfmining.analyze_class import check_dict, keyword_modify, keyword_contains_in, resove_dict
 from .hpb_pdfmining.main_decorators import timeout, check_first_page_with_dict, check_not_first_page_with_dict, controller
 from .hpb_pdfmining.extractors import FirstPageInfo, user_select_from_list, PDFExtractor, PageExtractor, checkpointsvaliadation, append_df_to_excel, find_key, find_right_neightbors, PDFExtractorFitz, PageExtractorFitz, Searcher
-from .models import MiningLog, TestDoc, SamplePool, Protocols, Protocol, AsinAssign
+from .models import MiningLog, TestDoc, SamplePool, Protocols, Protocol, AsinAssign, HubbleInfo,MiningQueue
 from .forms import TestDocForm
 from django.views.decorators.csrf import csrf_protect
 from django.contrib.auth.models import User
@@ -101,6 +101,7 @@ def tasks(request, asin_number, task_type, *args, **kwargs):
     task_type = task_type
     print(asin_number)
     print(task_type)
+    
     if request.method == 'POST':
 
         form = TestDocForm(request.POST, request.FILES)
@@ -111,11 +112,20 @@ def tasks(request, asin_number, task_type, *args, **kwargs):
                              docfile=request.FILES['docfile'], uploaded_by=request.user, asin=asin_number)  # .save()
 
             newdoc.save()
-            #excel_file = request.FILES['docfile']
-            #wb = load_workbook(excel_file)
-            #ws = wb.worksheets[0]
-            #f = open('log.txt', 'w')
+
+            # excel_file = request.FILES['docfile']
+            # wb = load_workbook(excel_file)
+            # ws = wb.worksheets[0]
+            # f = open('log.txt', 'w')
             # for row in ws.iter_rows(min_row=2, max_row=ws.max_row):
+            #     try:
+            #         HubbleInfo(asin = row[0].value, mfp = row[1].value, mfp_code = row[2].value, approval_type = row[3].value,
+            #         life_cycle =row[4].value, description = row[5].value,date_approved=row[6].value, experiration_date = row[7].value,
+            #         active_region = row[8].value,regular_body=row[9].value,po_approve=row[10].value,
+            #         first_request_date =row[11].value, approver=row[12].value, escalation_tt = row[13].value,
+            #         compliance_note = row[14].value).save()
+            #     except:
+            #         f.writelines([str(i.value)+',' for i in row]+['\n'])
             #Protocols(protocol_name=row[0].value, short_cut=row[1].value, amazon_number=row[3].value,uploaded_by = request.user).save()
 
             # SamplePool(parent_asin=row[0].value, region_id=row[1].value, marketplace_id=row[2].value, asin=row[3].value,
@@ -154,15 +164,20 @@ def tasks(request, asin_number, task_type, *args, **kwargs):
     documents = TestDoc.objects.filter(asin=asin_number)
 
     asin = SamplePool.objects.get(asin=asin_number)
-
+    hubbles= HubbleInfo.objects.filter(asin = "B001TOD7ME")
+    print(hubbles)
     # Render list page with the documents and the form
-    return render(request, 'dapsa/tasks.html', {'asin_number':asin_number, 'task_type':task_type,'documents': documents, 'asin': asin, 'form': form})
+    return render(request, 'dapsa/tasks.html', {'asin_number':asin_number, 'task_type':task_type,'documents': documents, 'asin': asin, 'form': form, 'hubbles':hubbles})
+
+def create_queue(casid):
+    pass    
 
 
 def pdfmain(request, asin_number, task_type, caseid,*args, **kargs):
     asin_number = asin_number
     task_type =task_type
     caseid = caseid
+    # t = MiningQueue.objects.get(sessionid = caseid)
     document = TestDoc.objects.get(caseid=caseid)
     if document:
         results = pdf_analysis_main(document)
@@ -196,8 +211,12 @@ def pdfmain(request, asin_number, task_type, caseid,*args, **kargs):
             (conclusion_dict, homeless_items, p_set) = mapping_protocols(
                 protcocol_set=[i for i in protcol_item], extract_list=conclusions)
             print(conclusions)
-           
-            return render(request, 'dapsa/analysis.html', {'asin_number':asin_number,'task_type':task_type,'caseid':caseid,'document': document, 'dict': results, 'conclusions': conclusion_dict, 'p_name': p_obj, 'miss': p_set})
+            all_protocols = [i.protocol_name for i in Protocols.objects.all()]
+            if p_obj:
+                k = all_protocols.index(p_obj.protocol_name)
+                del all_protocols[k]
+                all_protocols = [p_obj.protocol_name] + all_protocols
+            return render(request, 'dapsa/analysis.html', {'asin_number':asin_number,'task_type':task_type,'caseid':caseid,'document': document, 'dict': results, 'conclusions': conclusion_dict, 'p_name': p_obj, 'miss': p_set,'all_protocols':all_protocols})
         # return render(request, 'dapsa/analysis.html', {'document': document, 'dict': results})
     return render(request, 'dapsa/analysis.html', {'asin_number':asin_number,'task_type':task_type,'document': document})
 
@@ -209,6 +228,7 @@ def conclusion_extraction(*args, **kwargs):
             protocol => int : id of protocols 
             begin => int: page to start analysis conclusion tables
             end => int: page number to stop analysis
+            sessionid =>uuid for pdf review
 
     """
     Point.purge()
@@ -346,7 +366,7 @@ def secret_page_protocol_audit(request):
     # return render(request, 'secret_page_protocol.html', {'protocols': protocols})
 
 
-def pdf_analysis_main(doc):
+def pdf_analysis_main(doc, begin = 0, end=5):
     # frist create an instance to Mining Queue, if there are workers avaliable, pop queue,
     # delete this records, (or create a status, change that status to mining)
     # => analyse pdf and change the MiningLog status continue to monitoring this record
@@ -354,38 +374,38 @@ def pdf_analysis_main(doc):
     # start step2, display chosen protocol
     # analyzing and mapping , change the mapped protocol records dynamically
     #
-    print(doc.docfile.path)
-    doc = PDFExtractorFitz(doc.docfile.path)
+    def _find_keyword(page, s, words):
+        search_result = s.page_search_for(page=page,words = words)
+        return search_result
 
-    # test for iter page
-    """
-    for page in doc.__iter__():
-        p_list = page.page.getTextWords()
-        for item in p_list:
-            print(item)
-        p_list = page.recover(words=p_list,rect =page.page.rect )
-        for item in p_list:
-            print(item)
-            """
-    # test for get page
+    doc = PDFExtractorFitz(doc.docfile.path)
     page = doc.get_page(0)
+    # i = 0 
+    # while i <= end - begin:
+    #     page = doc.get_page(begin + i)
+    #     page.body = 0.3
+    #     page.header = 0.2
+    #     p_list = page.page.getTextWords()
+    #     p_block = page.page.getText("blocks")
+    #     p_list_header = page.recover(words=p_list, rect=page.header)
+    
     p_list = page.page.getTextWords()
     p_block = page.page.getText("blocks")
-
-    print(page.page.rect)
     page.body = 0.3
     page.header = 0.2
-    p_list_header = page.recover(words=p_list, rect=page.header)
-
-    for item in p_list_header:
-        print(item)
     p_list_block_header = page.check_blocks(words=p_block, rect=page.header)
-    for item in p_list_block_header:
-        print(item)
-    k = page.search_for(text="report", words=p_list_block_header)
+    # for item in p_list_block_header:
+    #     print("header information:~~")
+    #     print(item)
+    
     searcher = Searcher(idx=0, key="protocol")
-    results = searcher.page_search_for(flag=1, page=page)
+    results = searcher.page_search_for(flag=1, page=page, )
+    new_searcher = Searcher(idx=0, key="report number")
+    new_results = new_searcher.page_search_for(page = page, flag = 1,words = p_list_block_header)
+
     print(results, type(results))
+    print(new_results,type(new_searcher))
+    # assert 1 ==2
     return results
 
 

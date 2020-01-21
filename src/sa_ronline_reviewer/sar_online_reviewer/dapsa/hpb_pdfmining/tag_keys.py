@@ -69,7 +69,7 @@ BASIC_INFO = [
         'keywords': ['Test Report No.:', 'Number:'],
         'force': None,
         'regex': [r'\w+'],
-        'bbox':(1, 2, 3, 4)  # top 30 % of the page
+        'bbox':None,
     },
     {
         'item': 'protocol',

@@ -1,4 +1,5 @@
 from django import template
+from dapsa.models import MiningQueue, TestDoc
 
 register = template.Library()
 
@@ -30,6 +31,10 @@ def get_marketplace_name(asin):
     }
     marketplaceid = asin.marketplace_id
     return amazons[marketplaceid]
+
+@register.filter
+def open_tt(tt):
+    return tt[2:]
 
 
 register.filter('get_web', get_web)

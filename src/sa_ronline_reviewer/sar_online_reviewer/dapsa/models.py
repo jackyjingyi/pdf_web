@@ -346,6 +346,29 @@ class ExtractionLog(models.Model):
     pass
 
 
+class HubbleInfo(models.Model):
+    from datetime import date
+    asin = models.CharField(max_length=25,null=False, blank=False)
+    mfp = models.CharField(max_length=50, null=False, blank=False, primary_key=True)
+    mfp_code = models.CharField(max_length=50, null=True)
+    approval_type = models.CharField(max_length=150, null=True)
+    life_cycle = models.CharField(max_length=50, null=True, blank= True)
+    active_region = models.CharField(max_length=50, null=True, blank=True)
+    description = models.TextField(null=True, blank=True)
+    date_approved = models.DateField(default = date.min)
+    experiration_date=models.DateField(default = date.min)
+    first_request_date = models.DateField(default = date.min)
+    earliest_test_request_date=models.DateField(default = date.min) 
+    regular_body = models.CharField(max_length=50, null=True)
+    po_approve = models.CharField(max_length=25,  null=True,blank=True)
+    approver = models.CharField(max_length=50, null=True)
+    escalation_tt = models.CharField(max_length=300, null=True, blank=True)
+    compliance_note = models.TextField(null=True, blank=True)
+    pl_doc = models.CharField(max_length=100, null=True,blank=True)
+    certificate_no = models.CharField(max_length=300, null=True)
+    uploaded_date = models.DateTimeField(auto_now_add=True)
+
+
 class MappingLog(models.Model):
     """
     Logs of Mapping stage =>(stage2)"""

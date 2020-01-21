@@ -83,6 +83,15 @@ class Point:
     two points from a LTCurve, it is the deep
     tag indicate that if two lines belong to a
     table
+    todo:
+    need add up {
+        'session id (uuid)': {
+            'pageid': [point1,point2]
+        },
+        'session id (uuid)': {
+            'pageid': [point1,point2]
+        }
+    }
     """
     pagePoints = {}
     pageMiddlePoints = {}
@@ -168,19 +177,38 @@ class Point:
                 (self.pageid, self.point_id, self.x, self.y, self.is_child, self.parents))
 
     @classmethod
-    def set_page_points(cls, pageid):
-        cls.pagePoints[pageid] = []
-        cls.pageMiddlePoints[pageid] = []
+    def set_page_points(cls, pageid, sessionid = None):
+        if sessionid:
+            if sessionid in cls.pagePoints.keys():
+                cls.pagePoints[sessionid][pageid] = []
+            else:
+                cls.pagePoints[sessionid] = {}
+                cls.pagePoints[sessionid][pageid] = []
 
-    def add_to_page_points(self, pageid):
+            if sessionid in cls.pageMiddlePoints.keys():
+                cls.pageMiddlePoints[sessionid][pageid] = []
+            else:
+                cls.pageMiddlePoints[sessionid][pageid] = {}
+                cls.pageMiddlePoints[sessionid][pageid] = []
+        else:
+            cls.pagePoints[pageid] = []
+            cls.pageMiddlePoints[pageid] = []
+
+    def add_to_page_points(self, pageid, sessionid = None):
         if not self.is_child:
-            Point.pagePoints[pageid].append(self)
+            if sessionid:
+                Point.pagePoints[sessionid][pageid].append(self)
+            else:
+                Point.pagePoints[pageid].append(self)
         else:
             if not all(i == -999 for i in self.parents):
-                Point.pageMiddlePoints[pageid].append(self)
+                if sessionid:
+                    Point.pageMiddlePoints[sessionid][pageid].append(self)
+                else:
+                    Point.pageMiddlePoints[pageid].append(self)
 
     @classmethod
-    def clean_points(cls, pageid, textboxlist):
+    def clean_points(cls, pageid, textboxlist,sessionid = None):
         # it wont cause trouble to closed tables
         def check_points_valiadation(point_list, textboxlist):
             # remove all points in a textbox e.g a html address with bottom line
@@ -197,17 +225,26 @@ class Point:
                 else:
                     valid_points.append(point)
             return valid_points
-
-        cls.pagePoints[pageid] = check_points_valiadation(cls.pagePoints[pageid], textboxlist=textboxlist)
+        if sessionid:
+            cls.pagePoints[sessionid][pageid] = check_points_valiadation(cls.pagePoints[sessionid][pageid], textboxlist=textboxlist)
+        else:
+            cls.pagePoints[pageid] = check_points_valiadation(cls.pagePoints[pageid], textboxlist=textboxlist)
 
     @classmethod
-    def purge(cls):
+    def purge(cls, sessionid = None):
         """
         purge all
         :return:
         """
-        cls.pagePoints = {}
-        cls.pageMiddlePoints = {}
+        if sessionid:
+            try:
+                del cls.pagePoints[sessionid]
+                del cls.pageMiddlePoints[sessionid]
+            except KeyError:
+                logging.warning("session {%s} is not in class " % sessionid)
+        else:
+            cls.pagePoints = {}
+            cls.pageMiddlePoints = {}
 
 
 class Cluster:
