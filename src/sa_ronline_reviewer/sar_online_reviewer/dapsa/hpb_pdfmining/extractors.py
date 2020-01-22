@@ -191,9 +191,10 @@ def find_right_neightbors(media_bbox, layout, obj, width=3, pts=0.2, position='b
 
 class PageExtractor:
 
-    def __init__(self, layout, pageid,page_number, cache=True):
+    def __init__(self, layout, pageid,page_number, cache=True, sessionid = None):
         self.layout = layout
         self.pageid = pageid
+        self.sessionid = sessionid
         self.page_number = page_number
         self.text_box = []
         self.cache = cache
@@ -212,7 +213,7 @@ class PageExtractor:
             self.tables = sorted(self.tables, key=lambda x: x.bbox[3], reverse=True)
 
     def __repr__(self):
-        return "<pageid: %s, total tables: %s >" % (self.pageid, len(self.tables))
+        return "<sessionid: %s , pageid: %s, total tables: %s >" % (self.sessionid. self.pageid, len(self.tables))
 
     def __call__(self, *args, **kwargs):
         self.solve_points()
@@ -220,100 +221,195 @@ class PageExtractor:
         self.cell_to_table()
 
     def solve_points(self):
-        Point.set_page_points(pageid=self.pageid)
-        point_count = 0
-        mid_count = 0
-        temp = set()
-        # lines = []
-        for element in self.layout:
-            logging.debug("checking element %s" % element)
-            try:
-                if element._objs:
-                    for ele in element._objs:
-                        temp.update([ele])
-                else:
-                    logging.debug("single element : %s" % element)
+        if self.sessionid:
+            Point.set_page_points(pageid=self.pageid,sessionid=self.sessionid)
+            point_count = 0
+            mid_count = 0
+            temp = set()
+            # lines = []
+            for element in self.layout:
+                logging.debug("checking element %s" % element)
+                try:
+                    if element._objs:
+                        for ele in element._objs:
+                            temp.update([ele])
+                    else:
+                        logging.debug("single element : %s" % element)
+                        temp.update([element])
+                except AttributeError:
                     temp.update([element])
-            except AttributeError:
-                temp.update([element])
 
-        for element in temp:
-            if isinstance(element, LTPage):
-                logging.debug("this is ltpage %s" % element)
-            if isinstance(element, LTCurve):
-                point_left_bottom = Point(x=element.bbox[0], y=element.bbox[1], pageid=self.pageid,
-                                          point_id=point_count)
-                point_right_top = Point(element.bbox[2], element.bbox[3], pageid=self.pageid, point_id=point_count + 1)
-                point_left_top = Point(x=element.bbox[0], y=element.bbox[3], pageid=self.pageid,
-                                       point_id=point_count + 2)
-                point_right_bottom = Point(element.bbox[2], element.bbox[1], pageid=self.pageid,
-                                           point_id=point_count + 3)
-                middle_point_1 = Point(x=(element.bbox[0] + element.bbox[2]) / 2,
-                                       y=element.bbox[1], pageid=self.pageid, point_id=mid_count,
-                                       is_child=True)
-                middle_point_2 = Point(x=element.bbox[2],
-                                       y=(element.bbox[1] + element.bbox[3]) / 2, pageid=self.pageid,
-                                       point_id=mid_count + 1,
-                                       is_child=True)
-                middle_point_3 = Point(x=(element.bbox[0] + element.bbox[2]) / 2,
-                                       y=element.bbox[3], pageid=self.pageid,
-                                       point_id=mid_count + 2,
-                                       is_child=True)
-                middle_point_4 = Point(x=element.bbox[0],
-                                       y=(element.bbox[1] + element.bbox[3]) / 2, pageid=self.pageid,
-                                       point_id=mid_count + 3,
-                                       is_child=True)
-                point_left_bottom.add_to_page_points(pageid=self.pageid)
-                point_right_top.add_to_page_points(pageid=self.pageid)
-                point_right_bottom.add_to_page_points(pageid=self.pageid)
-                point_left_top.add_to_page_points(pageid=self.pageid)
-                point_left_bottom.assign_child(middle_point_1)
-                point_left_bottom.assign_child(middle_point_4)
-                point_left_top.assign_child(middle_point_4)
-                point_left_top.assign_child(middle_point_3)
-                point_right_top.assign_child(middle_point_2)
-                point_right_top.assign_child(middle_point_3)
-                point_right_bottom.assign_child(middle_point_1)
-                point_right_bottom.assign_child(middle_point_2)
-                middle_point_1.add_to_page_points(pageid=self.pageid)
-                middle_point_2.add_to_page_points(pageid=self.pageid)
-                middle_point_3.add_to_page_points(pageid=self.pageid)
-                middle_point_4.add_to_page_points(pageid=self.pageid)
-                point_count += 4
-                mid_count += 4
-            elif isinstance(element, (LTTextBox, LTTextLine)):
-                logging.info("adding textbox %s", element)
-                self.text_box.append(element)
+            for element in temp:
+                if isinstance(element, LTPage):
+                    logging.debug("this is ltpage %s" % element)
+                if isinstance(element, LTCurve):
+                    point_left_bottom = Point(x=element.bbox[0], y=element.bbox[1], pageid=self.pageid,
+                                            point_id=point_count, sessionid = self.sessionid)
+                    point_right_top = Point(element.bbox[2], element.bbox[3], pageid=self.pageid, point_id=point_count + 1,
+                                            sessionid = self.sessionid)
+                    point_left_top = Point(x=element.bbox[0], y=element.bbox[3], pageid=self.pageid,
+                                        point_id=point_count + 2,sessionid = self.sessionid)
+                    point_right_bottom = Point(element.bbox[2], element.bbox[1], pageid=self.pageid,
+                                            point_id=point_count + 3,sessionid = self.sessionid)
+                    middle_point_1 = Point(x=(element.bbox[0] + element.bbox[2]) / 2,
+                                        y=element.bbox[1], pageid=self.pageid, point_id=mid_count,
+                                        is_child=True,sessionid = self.sessionid)
+                    middle_point_2 = Point(x=element.bbox[2],
+                                        y=(element.bbox[1] + element.bbox[3]) / 2, pageid=self.pageid,
+                                        point_id=mid_count + 1,
+                                        is_child=True,sessionid = self.sessionid)
+                    middle_point_3 = Point(x=(element.bbox[0] + element.bbox[2]) / 2,
+                                        y=element.bbox[3], pageid=self.pageid,
+                                        point_id=mid_count + 2,
+                                        is_child=True,sessionid = self.sessionid)
+                    middle_point_4 = Point(x=element.bbox[0],
+                                        y=(element.bbox[1] + element.bbox[3]) / 2, pageid=self.pageid,
+                                        point_id=mid_count + 3,
+                                        is_child=True,sessionid = self.sessionid)
+                    point_left_bottom.add_to_page_points(pageid=self.pageid,sessionid=self.sessionid)
+                    point_right_top.add_to_page_points(pageid=self.pageid,sessionid=self.sessionid)
+                    point_right_bottom.add_to_page_points(pageid=self.pageid,sessionid=self.sessionid)
+                    point_left_top.add_to_page_points(pageid=self.pageid,sessionid=self.sessionid)
+                    point_left_bottom.assign_child(middle_point_1)
+                    point_left_bottom.assign_child(middle_point_4)
+                    point_left_top.assign_child(middle_point_4)
+                    point_left_top.assign_child(middle_point_3)
+                    point_right_top.assign_child(middle_point_2)
+                    point_right_top.assign_child(middle_point_3)
+                    point_right_bottom.assign_child(middle_point_1)
+                    point_right_bottom.assign_child(middle_point_2)
+                    middle_point_1.add_to_page_points(pageid=self.pageid,sessionid=self.sessionid)
+                    middle_point_2.add_to_page_points(pageid=self.pageid,sessionid=self.sessionid)
+                    middle_point_3.add_to_page_points(pageid=self.pageid,sessionid=self.sessionid)
+                    middle_point_4.add_to_page_points(pageid=self.pageid,sessionid=self.sessionid)
+                    point_count += 4
+                    mid_count += 4
+                elif isinstance(element, (LTTextBox, LTTextLine)):
+                    logging.info("adding textbox %s", element)
+                    self.text_box.append(element)
+
+        else:    
+            Point.set_page_points(pageid=self.pageid)
+            point_count = 0
+            mid_count = 0
+            temp = set()
+            # lines = []
+            for element in self.layout:
+                logging.debug("checking element %s" % element)
+                try:
+                    if element._objs:
+                        for ele in element._objs:
+                            temp.update([ele])
+                    else:
+                        logging.debug("single element : %s" % element)
+                        temp.update([element])
+                except AttributeError:
+                    temp.update([element])
+
+            for element in temp:
+                if isinstance(element, LTPage):
+                    logging.debug("this is ltpage %s" % element)
+                if isinstance(element, LTCurve):
+                    point_left_bottom = Point(x=element.bbox[0], y=element.bbox[1], pageid=self.pageid,
+                                            point_id=point_count)
+                    point_right_top = Point(element.bbox[2], element.bbox[3], pageid=self.pageid, point_id=point_count + 1)
+                    point_left_top = Point(x=element.bbox[0], y=element.bbox[3], pageid=self.pageid,
+                                        point_id=point_count + 2)
+                    point_right_bottom = Point(element.bbox[2], element.bbox[1], pageid=self.pageid,
+                                            point_id=point_count + 3)
+                    middle_point_1 = Point(x=(element.bbox[0] + element.bbox[2]) / 2,
+                                        y=element.bbox[1], pageid=self.pageid, point_id=mid_count,
+                                        is_child=True)
+                    middle_point_2 = Point(x=element.bbox[2],
+                                        y=(element.bbox[1] + element.bbox[3]) / 2, pageid=self.pageid,
+                                        point_id=mid_count + 1,
+                                        is_child=True)
+                    middle_point_3 = Point(x=(element.bbox[0] + element.bbox[2]) / 2,
+                                        y=element.bbox[3], pageid=self.pageid,
+                                        point_id=mid_count + 2,
+                                        is_child=True)
+                    middle_point_4 = Point(x=element.bbox[0],
+                                        y=(element.bbox[1] + element.bbox[3]) / 2, pageid=self.pageid,
+                                        point_id=mid_count + 3,
+                                        is_child=True)
+                    point_left_bottom.add_to_page_points(pageid=self.pageid)
+                    point_right_top.add_to_page_points(pageid=self.pageid)
+                    point_right_bottom.add_to_page_points(pageid=self.pageid)
+                    point_left_top.add_to_page_points(pageid=self.pageid)
+                    point_left_bottom.assign_child(middle_point_1)
+                    point_left_bottom.assign_child(middle_point_4)
+                    point_left_top.assign_child(middle_point_4)
+                    point_left_top.assign_child(middle_point_3)
+                    point_right_top.assign_child(middle_point_2)
+                    point_right_top.assign_child(middle_point_3)
+                    point_right_bottom.assign_child(middle_point_1)
+                    point_right_bottom.assign_child(middle_point_2)
+                    middle_point_1.add_to_page_points(pageid=self.pageid)
+                    middle_point_2.add_to_page_points(pageid=self.pageid)
+                    middle_point_3.add_to_page_points(pageid=self.pageid)
+                    middle_point_4.add_to_page_points(pageid=self.pageid)
+                    point_count += 4
+                    mid_count += 4
+                elif isinstance(element, (LTTextBox, LTTextLine)):
+                    logging.info("adding textbox %s", element)
+                    self.text_box.append(element)
 
         assert len(self.text_box) != 0, "text box length = %d" % len(self.text_box)
         self.sort_text_box()
 
     def cluster_to_cell(self):
-        clean_points = Point.pagePoints[self.pageid]
-        if len(clean_points) == 0:
-            logging.warning("clean points is empty")
-        Cluster.group_cluster(pageid=self.pageid, cleaned_points=clean_points)
-        Cluster.sort_page_cluster(pageid=self.pageid)
-        Cluster.assign_id(pageid=self.pageid)
-        for c in Cluster.pageSortedClusters[self.pageid]:
-            if len(c.value) < 3:
-                logging.warning("%s cluster has less than 3 children", c)
-        for c in Cluster.pageSortedClusters[self.pageid]:
-            c.get_middle()
-        Cluster.locate_roots(pageid=self.pageid)
-        Cluster.do_cell(pageid=self.pageid)
+        if self.sessionid:
+            clean_points = Point.pagePoints[self.sessionid][self.pageid]
+            if len(clean_points) == 0:
+                logging.warning("clean points is empty")
+            Cluster.group_cluster(pageid=self.pageid, cleaned_points=clean_points,sessionid=self.sessionid)
+            Cluster.sort_page_cluster(pageid=self.pageid,sessionid=self.sessionid)
+            Cluster.assign_id(pageid=self.pageid,sessionid=self.sessionid)
+            for c in Cluster.pageSortedClusters[self.sessionid][self.pageid]:
+                if len(c.value) < 3:
+                    logging.warning("%s cluster has less than 3 children", c)
+            for c in Cluster.pageSortedClusters[self.sessionid][self.pageid]:
+                c.get_middle(sessionid = self.sessionid)
+            Cluster.locate_roots(pageid=self.pageid,sessionid=self.sessionid)
+            Cluster.do_cell(pageid=self.pageid,sessionid=self.sessionid)
 
-        for c in list(Cell.pageCells[self.pageid].values()):
-            for j in c:
-                j()
-        Cell.assign_text(pageid=self.pageid, textlist=self.text_box)
-        Cell.check_text(self.pageid)
+            for c in list(Cell.pageCells[self.sessionid][self.pageid].values()):
+                for j in c:
+                    j()
+            Cell.assign_text(pageid=self.pageid, textlist=self.text_box, sessionid=self.sessionid)
+            Cell.check_text(self.pageid,sessionid=self.sessionid)
+        else:
+            clean_points = Point.pagePoints[self.pageid]
+            if len(clean_points) == 0:
+                logging.warning("clean points is empty")
+            Cluster.group_cluster(pageid=self.pageid, cleaned_points=clean_points)
+            Cluster.sort_page_cluster(pageid=self.pageid)
+            Cluster.assign_id(pageid=self.pageid)
+            for c in Cluster.pageSortedClusters[self.pageid]:
+                if len(c.value) < 3:
+                    logging.warning("%s cluster has less than 3 children", c)
+            for c in Cluster.pageSortedClusters[self.pageid]:
+                c.get_middle()
+            Cluster.locate_roots(pageid=self.pageid)
+            Cluster.do_cell(pageid=self.pageid)
+
+            for c in list(Cell.pageCells[self.pageid].values()):
+                for j in c:
+                    j()
+            Cell.assign_text(pageid=self.pageid, textlist=self.text_box)
+            Cell.check_text(self.pageid)
 
     def cell_to_table(self):
-        table_generator = Table.get_tables(list(Cell.pageCells[self.pageid].values()), pageid=self.pageid)
+        if self.sessionid:
+            table_generator = Table.get_tables(list(Cell.pageCells[self.sessionid][self.pageid].values()), pageid=self.pageid, sessionid=self.sessionid)
 
-        for table in table_generator:
-            self.tables.append(next(table))
+            for table in table_generator:
+                self.tables.append(next(table))
+        else:
+            table_generator = Table.get_tables(list(Cell.pageCells[self.pageid].values()), pageid=self.pageid)
+
+            for table in table_generator:
+                self.tables.append(next(table))
 
     def get_body(self, idx=-1):
         """
@@ -606,12 +702,13 @@ class PDFExtractor:
     put all piece together
     """
 
-    def __init__(self, fp, target=None):
+    def __init__(self, fp, target=None, sessionid = None):
         self.PAGE_DICT = {}
         self.DICT_PAGE = {}
         self.fp = fp
         self.parser = PDFParser(fp)
         self.document = PDFDocument(self.parser)
+        self.sessionid = sessionid
         self.rsrcmgr = PDFResourceManager()
         self.laparams = LAParams(line_margin=LINE_MARGIN, char_margin=CHAR_MARGIN, all_texts=True, boxes_flow=0.5)
         self.pageagg = PDFPageAggregator(self.rsrcmgr, laparams=self.laparams)
@@ -692,26 +789,48 @@ class PDFExtractor:
 
     @timeout(5)
     def process_page(self):
-        try:
-            if self.target_page:
-                for p in PDFPage.get_pages(self.fp):
-                    for tp in self.target_page:
-                        if p.pageid == self.PAGE_DICT[tp]:
+        if self.sessionid:
+            try:
+                if self.target_page:
+                    for p in PDFPage.get_pages(self.fp):
+                        for tp in self.target_page:
+                            if p.pageid == self.PAGE_DICT[tp]:
+                                self.interpreter.process_page(p)
+                                layout = self.pageagg.get_result()
+                                yield PageExtractor(layout=layout, pageid=p.pageid,page_number = self.DICT_PAGE[p.pageid], cache=True,sessionid=self.sessionid)
+                else:
+                    start = self.begin_page            
+                    for p in PDFPage.get_pages(self.fp):
+                        if self.DICT_PAGE[p.pageid] >= start:
                             self.interpreter.process_page(p)
                             layout = self.pageagg.get_result()
-                            yield PageExtractor(layout=layout, pageid=p.pageid,page_number = self.DICT_PAGE[p.pageid], cache=True)
-            else:
-                start = self.begin_page            
-                for p in PDFPage.get_pages(self.fp):
-                    if self.DICT_PAGE[p.pageid] >= start:
-                        self.interpreter.process_page(p)
-                        layout = self.pageagg.get_result()
-                        yield PageExtractor(layout=layout, pageid=p.pageid, page_number = self.DICT_PAGE[p.pageid],cache=True)
-                    else:
-                        pass
+                            yield PageExtractor(layout=layout, pageid=p.pageid, page_number = self.DICT_PAGE[p.pageid],cache=True,sessionid=self.sessionid)
+                        else:
+                            pass
 
-        except TimeoutError:
-            logging.debug("Process_page time out")
+            except TimeoutError:
+                logging.debug("Process_page time out")
+        else:
+            try:
+                if self.target_page:
+                    for p in PDFPage.get_pages(self.fp):
+                        for tp in self.target_page:
+                            if p.pageid == self.PAGE_DICT[tp]:
+                                self.interpreter.process_page(p)
+                                layout = self.pageagg.get_result()
+                                yield PageExtractor(layout=layout, pageid=p.pageid,page_number = self.DICT_PAGE[p.pageid], cache=True)
+                else:
+                    start = self.begin_page            
+                    for p in PDFPage.get_pages(self.fp):
+                        if self.DICT_PAGE[p.pageid] >= start:
+                            self.interpreter.process_page(p)
+                            layout = self.pageagg.get_result()
+                            yield PageExtractor(layout=layout, pageid=p.pageid, page_number = self.DICT_PAGE[p.pageid],cache=True)
+                        else:
+                            pass
+
+            except TimeoutError:
+                logging.debug("Process_page time out")
 
     @timeout(5)
     def iter_page(self, start=None, end=None, single=None):
@@ -726,31 +845,59 @@ class PDFExtractor:
         :param single: only yield single page, if None, iter from start to end
         :return: PageExtractor obj
         """
-        if any((start, end)):
-            assert isinstance(single, type(None))
-            for p in PDFPage.get_pages(self.fp):
-                if start and not end:
-                    if self.DICT_PAGE[p.pageid] >= start:
+        if self.sessionid:
+            if any((start, end)):
+                assert isinstance(single, type(None))
+                for p in PDFPage.get_pages(self.fp):
+                    if start and not end:
+                        if self.DICT_PAGE[p.pageid] >= start:
+                            self.interpreter.process_page(p)
+                            layout = self.pageagg.get_result()
+                            yield PageExtractor(layout=layout, pageid=p.pageid, page_number = self.DICT_PAGE[p.pageid],cache=True,sessionid=self.sessionid)
+                    elif start and end:
+                        if start <= self.DICT_PAGE[p.pageid] <= end:
+                            self.interpreter.process_page(p)
+                            layout = self.pageagg.get_result()
+                            yield PageExtractor(layout=layout, pageid=p.pageid,page_number = self.DICT_PAGE[p.pageid], cache=True,sessionid=self.sessionid)
+                    elif not start and end:
+                        if 1 <= self.DICT_PAGE[p.pageid] <= end:
+                            self.interpreter.process_page(p)
+                            layout = self.pageagg.get_result()
+                            yield PageExtractor(layout=layout, pageid=p.pageid,page_number = self.DICT_PAGE[p.pageid],cache=True,sessionid=self.sessionid)
+            else:
+                assert isinstance(single, int), "if not start , end , single must be given"
+                for p in PDFPage.get_pages(self.fp):
+                    if self.DICT_PAGE[p.pageid] == single:
                         self.interpreter.process_page(p)
                         layout = self.pageagg.get_result()
-                        yield PageExtractor(layout=layout, pageid=p.pageid, page_number = self.DICT_PAGE[p.pageid],cache=True)
-                elif start and end:
-                    if start <= self.DICT_PAGE[p.pageid] <= end:
+                        yield PageExtractor(layout=layout, pageid=p.pageid,page_number = self.DICT_PAGE[p.pageid], cache=True,sessionid=self.sessionid)
+
+        else:
+            if any((start, end)):
+                assert isinstance(single, type(None))
+                for p in PDFPage.get_pages(self.fp):
+                    if start and not end:
+                        if self.DICT_PAGE[p.pageid] >= start:
+                            self.interpreter.process_page(p)
+                            layout = self.pageagg.get_result()
+                            yield PageExtractor(layout=layout, pageid=p.pageid, page_number = self.DICT_PAGE[p.pageid],cache=True)
+                    elif start and end:
+                        if start <= self.DICT_PAGE[p.pageid] <= end:
+                            self.interpreter.process_page(p)
+                            layout = self.pageagg.get_result()
+                            yield PageExtractor(layout=layout, pageid=p.pageid,page_number = self.DICT_PAGE[p.pageid], cache=True)
+                    elif not start and end:
+                        if 1 <= self.DICT_PAGE[p.pageid] <= end:
+                            self.interpreter.process_page(p)
+                            layout = self.pageagg.get_result()
+                            yield PageExtractor(layout=layout, pageid=p.pageid,page_number = self.DICT_PAGE[p.pageid],cache=True)
+            else:
+                assert isinstance(single, int), "if not start , end , single must be given"
+                for p in PDFPage.get_pages(self.fp):
+                    if self.DICT_PAGE[p.pageid] == single:
                         self.interpreter.process_page(p)
                         layout = self.pageagg.get_result()
                         yield PageExtractor(layout=layout, pageid=p.pageid,page_number = self.DICT_PAGE[p.pageid], cache=True)
-                elif not start and end:
-                    if 1 <= self.DICT_PAGE[p.pageid] <= end:
-                        self.interpreter.process_page(p)
-                        layout = self.pageagg.get_result()
-                        yield PageExtractor(layout=layout, pageid=p.pageid,page_number = self.DICT_PAGE[p.pageid],cache=True)
-        else:
-            assert isinstance(single, int), "if not start , end , single must be given"
-            for p in PDFPage.get_pages(self.fp):
-                if self.DICT_PAGE[p.pageid] == single:
-                    self.interpreter.process_page(p)
-                    layout = self.pageagg.get_result()
-                    yield PageExtractor(layout=layout, pageid=p.pageid,page_number = self.DICT_PAGE[p.pageid], cache=True)
 
 
 class PDFExtractorFitz:

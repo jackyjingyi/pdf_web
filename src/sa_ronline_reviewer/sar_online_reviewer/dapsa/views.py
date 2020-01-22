@@ -177,8 +177,10 @@ def pdfmain(request, asin_number, task_type, caseid,*args, **kargs):
     asin_number = asin_number
     task_type =task_type
     caseid = caseid
-    # t = MiningQueue.objects.get(sessionid = caseid)
     document = TestDoc.objects.get(caseid=caseid)
+    mining_item = MiningQueue(caseid =document)
+    mining_item.save()
+    
     if document:
         results = pdf_analysis_main(document)
         if isinstance(results, set) and len(results) > 0:
@@ -207,7 +209,7 @@ def pdfmain(request, asin_number, task_type, caseid,*args, **kargs):
             results = {}
             results['protocol'] = p_obj.protocol_name
             conclusions = conclusion_extraction(
-                doc=document, protocol=p_obj.id, begin=4, end=10)
+                doc=document, protocol=p_obj.id, begin=4, end=10, sessionid = mining_item.sessionid)
             (conclusion_dict, homeless_items, p_set) = mapping_protocols(
                 protcocol_set=[i for i in protcol_item], extract_list=conclusions)
             print(conclusions)
@@ -231,47 +233,48 @@ def conclusion_extraction(*args, **kwargs):
             sessionid =>uuid for pdf review
 
     """
-    Point.purge()
-    Cluster.purge()
-    Cell.purge()
-    doc = kwargs['doc']
-    protocol = kwargs['protocol']
-    begin = kwargs['begin']
-    end = kwargs['end']
-    fp = doc.docfile.open('rb')
-    pdf = PDFExtractor(fp)
+    try:
+        doc = kwargs['doc']
+        protocol = kwargs['protocol']
+        begin = kwargs['begin']
+        end = kwargs['end']
+        sessionid = kwargs['sessionid']
+        fp = doc.docfile.open('rb')
+        pdf = PDFExtractor(fp, sessionid=sessionid)
 
-    # testing mode set start page
-    pdf.begin_page = begin
-    # start from 'start' page, pdf_iter is a generator, generate "PageExtractor" instance
-    pdf_iter = pdf.process_page()
-    # testing : only process 9 pages start from begin page
-    count = 0
-    conclusion_table = []
-    while count < end - begin:
-        page = next(pdf_iter)
-        # PageExtractor call() {
-        #   1.detect points from ltrect or ltline
-        #   2.clustering points into Cluster objects
-        #   3.establish cells from clusters
-        #   4.establish tables by cells
-        # }
-        page()
-        # To get conclusion table, the perviouse move is get the last table object
-        # in a page, however, we can transform it into if table in fitz.Rect(page.body)
-        count += 1
-        print(page.tables)
-        for table in page.tables:
-            # df is a pd.dataframe, first column should be amazon speck number
-            # because cornerstone protocols are simplier than TUV protocols,
-            # new mapping function can simply mapping with spec number to identifiy a record
+        # testing mode set start page
+        pdf.begin_page = begin
+        # start from 'start' page, pdf_iter is a generator, generate "PageExtractor" instance
+        pdf_iter = pdf.process_page()
+        # testing : only process 9 pages start from begin page
+        count = 0
+        conclusion_table = []
+        while count < end - begin:
+            page = next(pdf_iter)
+            # PageExtractor call() {
+            #   1.detect points from ltrect or ltline
+            #   2.clustering points into Cluster objects
+            #   3.establish cells from clusters
+            #   4.establish tables by cells
+            # }
+            page()
+            # To get conclusion table, the perviouse move is get the last table object
+            # in a page, however, we can transform it into if table in fitz.Rect(page.body)
+            count += 1
+            print(page.tables)
+            for table in page.tables:
+                # df is a pd.dataframe, first column should be amazon speck number
+                # because cornerstone protocols are simplier than TUV protocols,
+                # new mapping function can simply mapping with spec number to identifiy a record
 
-            df = table.table_to_df()
-            print(df)
-        # 1 is list which is the source of df [[str,str], []]
-        conclusion_table += [i + [page.page_number] for i in page.tables[-1].table_to_df()[1]]
-    # pdf purge
-
+                df = table.table_to_df()
+                print(df)
+            # 1 is list which is the source of df [[str,str], []]
+            conclusion_table += [i + [page.page_number] for i in page.tables[-1].table_to_df()[1]]
+    finally:
+        Point.purge(sessionid=sessionid)
+        Cluster.purge(sessionid=sessionid)
+        Cell.purge(sessionid=sessionid)
     return conclusion_table
 
 

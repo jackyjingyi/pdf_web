@@ -96,7 +96,7 @@ class Point:
     pagePoints = {}
     pageMiddlePoints = {}
 
-    def __init__(self, x, y, sessionid,pageid, point_id, line_width=2, is_child=False):
+    def __init__(self, x, y,pageid, point_id, line_width=2, is_child=False,sessionid=None):
         self.x = x
         self.y = y
         self.sessionid = sessionid
@@ -189,7 +189,7 @@ class Point:
             if sessionid in cls.pageMiddlePoints.keys():
                 cls.pageMiddlePoints[sessionid][pageid] = []
             else:
-                cls.pageMiddlePoints[sessionid][pageid] = {}
+                cls.pageMiddlePoints[sessionid]= {}
                 cls.pageMiddlePoints[sessionid][pageid] = []
         else:
             cls.pagePoints[pageid] = []
@@ -275,10 +275,10 @@ class Cluster:
     pageCells = {}
     starters = {}
 
-    def __init__(self):
+    def __init__(self, sessionid = None):
         self.key = (-1, -1)
         self.value = set()
-        self.sessionid = None
+        self.sessionid = sessionid
         self.pageid = None
         self.cluster_id = None
         self.point_id = set()
@@ -293,6 +293,9 @@ class Cluster:
         self.colParent = None
         self.color = 'white'
         self.byte_mark = 0
+        if self.sessionid:
+            if not self.sessionid in Cluster.pageSortedClusters.keys():
+                Cluster.pageSortedClusters[self.sessionid] = {}
 
     @classmethod
     def purge(cls, sessionid=None):
@@ -485,7 +488,7 @@ class Cluster:
             if m != -1:
                 return k
             else:
-                return Cluster.pageSortedClusters[sessionid][self.pageid][k].do1()
+                return Cluster.pageSortedClusters[sessionid][self.pageid][k].do1(sessionid=sessionid)
         # row child judgement put outside this function
         else:
             k = Cluster.pageSortedClusters[self.pageid][self.s1_matrix[1][1][0]].cluster_id
@@ -511,7 +514,7 @@ class Cluster:
                 try:
                     assert Cluster.pageSortedClusters[sessionid][self.pageid][k].s1_matrix[1][1][0] != -1, "cannot do 2, %s" % self
                     logging.debug("detect s1 matrix [%s]" %sum(Cluster.pageSortedClusters[sessionid][self.pageid][k].s1_matrix[0]))
-                    return Cluster.pageSortedClusters[self.pageid][k].do2(key)
+                    return Cluster.pageSortedClusters[sessionid][self.pageid][k].do2(key, sessionid=sessionid)
                 except AssertionError:
                     logging.debug("return %s " % Cluster.pageSortedClusters[sessionid][self.pageid][k].s1_matrix[1][3][0])
                     return -1
@@ -551,7 +554,7 @@ class Cluster:
                 else:
                     try:
                         assert Cluster.pageSortedClusters[sessionid][self.pageid][k].s1_matrix[1][2][0] != -1, "cannot do 3, %s" % self
-                        return Cluster.pageSortedClusters[sessionid][self.pageid][k].do3(key)
+                        return Cluster.pageSortedClusters[sessionid][self.pageid][k].do3(key,sessionid=sessionid)
                     except AssertionError:
                         logging.debug("return %s " % Cluster.pageSortedClusters[sessionid][self.pageid][k].s1_matrix[1][1][0])
                         return -1
@@ -587,7 +590,7 @@ class Cluster:
             if m != -1:
                 return k
             else:
-                return Cluster.pageSortedClusters[sessionid][self.pageid][k].do4()
+                return Cluster.pageSortedClusters[sessionid][self.pageid][k].do4(sessionid=sessionid)
         else:
             # row child judgement put outside this function
             k = Cluster.pageSortedClusters[self.pageid][self.s1_matrix[1][2][0]].cluster_id
@@ -633,6 +636,7 @@ class Cluster:
                 if point.pageid == pageid:
                     # make sure the cls page dict has been init
                     cls.set_page_cluster(pageid,sessionid=sessionid)
+                    
                     # if {}[key]: if key exist and not None or empty => True, otherwise False
                     if cls.pageCluster[sessionid][pageid]:
                         found = False
@@ -642,11 +646,11 @@ class Cluster:
                                 found = True
                                 break
                         if not found:
-                            new_cluster = Cluster()
+                            new_cluster = Cluster(sessionid=sessionid)
                             new_cluster.fill_(point)
                             cls.add_page_cluster(new_cluster, sessionid=sessionid)
                     else:
-                        new_cluster = Cluster()
+                        new_cluster = Cluster(sessionid=sessionid)
                         new_cluster.fill_(point)
                         cls.add_page_cluster(new_cluster,sessionid=sessionid)
         else:
@@ -703,6 +707,7 @@ class Cluster:
     @classmethod
     def sort_page_cluster(cls, pageid, sessionid = None):
         if sessionid:
+            print(cls.pageCluster)
             cls.pageSortedClusters[sessionid][pageid] = sorted(sorted(list(cls.pageCluster[sessionid][pageid]), key=lambda x: x.key[0]),
                                                 key=lambda x: round(x.key[1]), reverse=True)
         else:    
@@ -752,14 +757,14 @@ class Cluster:
                 while len(cls.starters[sessionid][c_root]) > 0:
                     c_starter = cls.starters[sessionid][c_root].pop()
                     if cls.pageSortedClusters[sessionid][pageid][c_starter].do_detect() == 2:
-                        m = cls.pageSortedClusters[sessionid][pageid][c_starter].do2(c_root)
-                        n = cls.pageSortedClusters[sessionid][pageid][c_starter].do3(c_root)
+                        m = cls.pageSortedClusters[sessionid][pageid][c_starter].do2(c_root, sessionid=sessionid)
+                        n = cls.pageSortedClusters[sessionid][pageid][c_starter].do3(c_root,sessionid=sessionid)
                         mbbox = cls.pageSortedClusters[sessionid][pageid][m].key
                         nbbox = cls.pageSortedClusters[sessionid][pageid][n].key
                         assumption = (mbbox[0], nbbox[1])
                         if not any([m == -1, n == -1]):
-                            k = cls.pageSortedClusters[sessionid][pageid][m].do4()
-                            t = cls.pageSortedClusters[sessionid][pageid][n].do1()
+                            k = cls.pageSortedClusters[sessionid][pageid][m].do4(sessionid=sessionid)
+                            t = cls.pageSortedClusters[sessionid][pageid][n].do1(sessionid=sessionid)
                             if k == t:
                                 s = cls.pageSortedClusters[sessionid][pageid][k].s1_matrix[0][0:4]
                                 x = {'pageid': pageid, 'table_root': c_starter == c_root, 'table_end': s == [1, 0, 0, 1],
@@ -1067,10 +1072,10 @@ class Cell:
         return self._upper_boundary
 
     @upper_boundary.setter
-    def upper_boundary(self, matrix,sessionid = None):
-        if sessionid:
-            self._upper_boundary = round(max(Cluster.pageSortedClusters[sessionid][self.pageid][matrix['root']].key[1],
-                                         Cluster.pageSortedClusters[sessionid][self.pageid][matrix['rtc']].key[1]), 2)
+    def upper_boundary(self, matrix, sessionid = None):
+        if self.sessionid:
+            self._upper_boundary = round(max(Cluster.pageSortedClusters[self.sessionid][self.pageid][matrix['root']].key[1],
+                                         Cluster.pageSortedClusters[self.sessionid][self.pageid][matrix['rtc']].key[1]), 2)
         else:
             self._upper_boundary = round(max(Cluster.pageSortedClusters[self.pageid][matrix['root']].key[1],
                                          Cluster.pageSortedClusters[self.pageid][matrix['rtc']].key[1]), 2)
@@ -1081,9 +1086,9 @@ class Cell:
 
     @lower_boundary.setter
     def lower_boundary(self, matrix, sessionid = None):
-        if sessionid:
-            self._lower_boundary = round(min(Cluster.pageSortedClusters[sessionid][self.pageid][matrix['lbc']].key[1],
-                                         Cluster.pageSortedClusters[sessionid][self.pageid][matrix['rbc']].key[1]), 2)
+        if self.sessionid:
+            self._lower_boundary = round(min(Cluster.pageSortedClusters[self.sessionid][self.pageid][matrix['lbc']].key[1],
+                                         Cluster.pageSortedClusters[self.sessionid][self.pageid][matrix['rbc']].key[1]), 2)
         else:
             self._lower_boundary = round(min(Cluster.pageSortedClusters[self.pageid][matrix['lbc']].key[1],
                                          Cluster.pageSortedClusters[self.pageid][matrix['rbc']].key[1]), 2)
@@ -1094,9 +1099,9 @@ class Cell:
 
     @left_boundary.setter
     def left_boundary(self, matrix, sessionid =None):
-        if sessionid:
-            self._left_boundary = round(min(Cluster.pageSortedClusters[sessionid][self.pageid][matrix['lbc']].key[0],
-                                        Cluster.pageSortedClusters[sessionid][self.pageid][matrix['root']].key[0]), 2)
+        if self.sessionid:
+            self._left_boundary = round(min(Cluster.pageSortedClusters[self.sessionid][self.pageid][matrix['lbc']].key[0],
+                                        Cluster.pageSortedClusters[self.sessionid][self.pageid][matrix['root']].key[0]), 2)
         else:
             self._left_boundary = round(min(Cluster.pageSortedClusters[self.pageid][matrix['lbc']].key[0],
                                         Cluster.pageSortedClusters[self.pageid][matrix['root']].key[0]), 2)
@@ -1107,9 +1112,9 @@ class Cell:
 
     @right_boundary.setter
     def right_boundary(self, matrix, sessionid = None):
-        if sessionid:
-            self._right_boundary = round(max(Cluster.pageSortedClusters[sessionid][self.pageid][matrix['rtc']].key[0],
-                                         Cluster.pageSortedClusters[sessionid][self.pageid][matrix['rbc']].key[0]), 2)
+        if self.sessionid:
+            self._right_boundary = round(max(Cluster.pageSortedClusters[self.sessionid][self.pageid][matrix['rtc']].key[0],
+                                         Cluster.pageSortedClusters[self.sessionid][self.pageid][matrix['rbc']].key[0]), 2)
         else:
             self._right_boundary = round(max(Cluster.pageSortedClusters[self.pageid][matrix['rtc']].key[0],
                                          Cluster.pageSortedClusters[self.pageid][matrix['rbc']].key[0]), 2)
@@ -1155,7 +1160,7 @@ class Cell:
         self._text += [t]
 
     def __repr__(self):
-        return ('<sessionid:%s,
+        return ('<sessionid:%s,'
                 'pageid: %s ,'
                 'table_no: %s '
                 'cell_id: %s, '
@@ -1192,7 +1197,7 @@ class Cell:
     @classmethod
     def check_text(cls, pageid, sessionid = None):
         if sessionid:
-            for v in cls.pageCells[pageid].values():
+            for v in cls.pageCells[sessionid][pageid].values():
                 for c in v:
                     logging.info("the current cell {%s} contains text {%s}, clusters : {%s}", c.bbox, c.text, c.matrix)              
         else:
@@ -1222,8 +1227,8 @@ class Table:
         self.vertical_list = vertical_list
 
     def __repr__(self):
-        return '<sessionid: %s'\ 
-                'pageid: %s, ' \
+        return '<sessionid: %s' \
+               'pageid: %s, ' \
                'table_no: %s  ' \
                'bbox: %s  ' \
                'base_matrix: %s' % (
