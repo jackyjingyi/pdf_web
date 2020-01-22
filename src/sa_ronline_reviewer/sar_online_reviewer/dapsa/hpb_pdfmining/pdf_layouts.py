@@ -96,9 +96,10 @@ class Point:
     pagePoints = {}
     pageMiddlePoints = {}
 
-    def __init__(self, x, y, pageid, point_id, line_width=2, is_child=False):
+    def __init__(self, x, y, sessionid,pageid, point_id, line_width=2, is_child=False):
         self.x = x
         self.y = y
+        self.sessionid = sessionid
         self.pageid = pageid
         self.point_id = point_id
         self.line_width = line_width
@@ -277,6 +278,7 @@ class Cluster:
     def __init__(self):
         self.key = (-1, -1)
         self.value = set()
+        self.sessionid = None
         self.pageid = None
         self.cluster_id = None
         self.point_id = set()
@@ -334,11 +336,11 @@ class Cluster:
         return acceptable
 
     def __repr__(self):
-        return ('<pageid: %s , cluster_id: %s, '
+        return ('<sessionid : %s ,pageid: %s , cluster_id: %s, '
                 'cluster_key: %s, number_of_points: %s ,'
                 'pointsID: %s ,'
                 'number_of_children = %s>\n' %
-                (self.pageid, self.cluster_id, self.key,
+                (self.sessionid,self.pageid, self.cluster_id, self.key,
                  len(self.value), self.point_id,
                  len([item.children for item in self.value if item.children])))
 
@@ -405,7 +407,7 @@ class Cluster:
             v[m[0] - 1] = m
         self.s1_matrix = [[int(v[i][0] != 0) for i in range(len(v))], [i[1][0] for i in v]]
         # 这里需要把list的前4个转为二进制代码 ， 并将相对应的起始态存入dict
-        print(self.cluster_id, self.s1_matrix)
+        logging.info("cluster id :%s => %s" % (self.cluster_id, self.s1_matrix))
 
     # need refine
     def get_middle(self,sessionid =None):
@@ -493,124 +495,241 @@ class Cluster:
             else:
                 return Cluster.pageSortedClusters[self.pageid][k].do1()
 
-    def do2(self, key):
-        # row child judgement put outside this function
-        k = Cluster.pageSortedClusters[self.pageid][self.s1_matrix[1][1][0]].cluster_id
-        m = Cluster.pageSortedClusters[self.pageid][self.s1_matrix[1][1][0]].s1_matrix[1][2][0]
-        
-        if Cluster.pageSortedClusters[self.pageid][k].do_detect() == 2:
-            if Cluster.pageSortedClusters[self.pageid][k].color == 'white':
-                logging.debug("do 2 adding {%s} color is {%s} " % (k, Cluster.pageSortedClusters[self.pageid][k].color))
-                Cluster.starters[key].update([k])
-        if m != -1:
-            return k
+    def do2(self,key,sessionid =None):
+        if sessionid:
+            # row child judgement put outside this function
+            k = Cluster.pageSortedClusters[sessionid][self.pageid][self.s1_matrix[1][1][0]].cluster_id
+            m = Cluster.pageSortedClusters[sessionid][self.pageid][self.s1_matrix[1][1][0]].s1_matrix[1][2][0]
+            
+            if Cluster.pageSortedClusters[sessionid][self.pageid][k].do_detect() == 2:
+                if Cluster.pageSortedClusters[sessionid][self.pageid][k].color == 'white':
+                    logging.debug("do 2 adding {%s} color is {%s} " % (k, Cluster.pageSortedClusters[sessionid][self.pageid][k].color))
+                    Cluster.starters[sessionid][key].update([k])
+            if m != -1:
+                return k
+            else:
+                try:
+                    assert Cluster.pageSortedClusters[sessionid][self.pageid][k].s1_matrix[1][1][0] != -1, "cannot do 2, %s" % self
+                    logging.debug("detect s1 matrix [%s]" %sum(Cluster.pageSortedClusters[sessionid][self.pageid][k].s1_matrix[0]))
+                    return Cluster.pageSortedClusters[self.pageid][k].do2(key)
+                except AssertionError:
+                    logging.debug("return %s " % Cluster.pageSortedClusters[sessionid][self.pageid][k].s1_matrix[1][3][0])
+                    return -1
         else:
-            try:
-                assert Cluster.pageSortedClusters[self.pageid][k].s1_matrix[1][1][0] != -1, "cannot do 2, %s" % self
-                logging.debug("detect s1 matrix [%s]" %sum(Cluster.pageSortedClusters[self.pageid][k].s1_matrix[0]))
-                return Cluster.pageSortedClusters[self.pageid][k].do2(key)
-            except AssertionError:
-                logging.debug("return %s " % Cluster.pageSortedClusters[self.pageid][k].s1_matrix[1][3][0])
-                return -1
-
-    def do3(self, key):
-        # row child judgement put outside this function
-        try:
-            k = Cluster.pageSortedClusters[self.pageid][self.s1_matrix[1][2][0]].cluster_id
-            m = Cluster.pageSortedClusters[self.pageid][self.s1_matrix[1][2][0]].s1_matrix[1][1][0]
-            logging.debug("Do2 : k : {%s}{%s}" %(k, Cluster.pageSortedClusters[self.pageid][self.s1_matrix[1][1][0]].s1_matrix))
+            # row child judgement put outside this function
+            k = Cluster.pageSortedClusters[self.pageid][self.s1_matrix[1][1][0]].cluster_id
+            m = Cluster.pageSortedClusters[self.pageid][self.s1_matrix[1][1][0]].s1_matrix[1][2][0]
+            
             if Cluster.pageSortedClusters[self.pageid][k].do_detect() == 2:
                 if Cluster.pageSortedClusters[self.pageid][k].color == 'white':
-                    logging.debug("do 3 adding {%s} color is {%s}" % (k, Cluster.pageSortedClusters[self.pageid][k].color))
+                    logging.debug("do 2 adding {%s} color is {%s} " % (k, Cluster.pageSortedClusters[self.pageid][k].color))
                     Cluster.starters[key].update([k])
             if m != -1:
                 return k
             else:
                 try:
-                    assert Cluster.pageSortedClusters[self.pageid][k].s1_matrix[1][2][0] != -1, "cannot do 3, %s" % self
-                    return Cluster.pageSortedClusters[self.pageid][k].do3(key)
+                    assert Cluster.pageSortedClusters[self.pageid][k].s1_matrix[1][1][0] != -1, "cannot do 2, %s" % self
+                    logging.debug("detect s1 matrix [%s]" %sum(Cluster.pageSortedClusters[self.pageid][k].s1_matrix[0]))
+                    return Cluster.pageSortedClusters[self.pageid][k].do2(key)
                 except AssertionError:
-                    logging.debug("return %s " % Cluster.pageSortedClusters[self.pageid][k].s1_matrix[1][1][0])
+                    logging.debug("return %s " % Cluster.pageSortedClusters[self.pageid][k].s1_matrix[1][3][0])
                     return -1
-        except TypeError:
-            logging.warning(" %s , get error on matrix %s ", self, self.s1_matrix)
 
-    def do4(self):
-        # row child judgement put outside this function
-        k = Cluster.pageSortedClusters[self.pageid][self.s1_matrix[1][2][0]].cluster_id
-        m = Cluster.pageSortedClusters[self.pageid][self.s1_matrix[1][2][0]].s1_matrix[1][3][0]
-        if m != -1:
-            return k
+    def do3(self, key,sessionid =None):
+        if sessionid:
+                # row child judgement put outside this function
+            try:
+                k = Cluster.pageSortedClusters[sessionid][self.pageid][self.s1_matrix[1][2][0]].cluster_id
+                m = Cluster.pageSortedClusters[sessionid][self.pageid][self.s1_matrix[1][2][0]].s1_matrix[1][1][0]
+                logging.debug("Do2 : k : {%s}{%s}" %(k, Cluster.pageSortedClusters[sessionid][self.pageid][self.s1_matrix[1][1][0]].s1_matrix))
+                if Cluster.pageSortedClusters[sessionid][self.pageid][k].do_detect() == 2:
+                    if Cluster.pageSortedClusters[sessionid][self.pageid][k].color == 'white':
+                        logging.debug("do 3 adding {%s} color is {%s}" % (k, Cluster.pageSortedClusters[sessionid][self.pageid][k].color))
+                        Cluster.starters[sessionid][key].update([k])
+                if m != -1:
+                    return k
+                else:
+                    try:
+                        assert Cluster.pageSortedClusters[sessionid][self.pageid][k].s1_matrix[1][2][0] != -1, "cannot do 3, %s" % self
+                        return Cluster.pageSortedClusters[sessionid][self.pageid][k].do3(key)
+                    except AssertionError:
+                        logging.debug("return %s " % Cluster.pageSortedClusters[sessionid][self.pageid][k].s1_matrix[1][1][0])
+                        return -1
+            except TypeError:
+                logging.warning(" %s , get error on matrix %s ", self, self.s1_matrix)
         else:
-            return Cluster.pageSortedClusters[self.pageid][k].do4()
+            # row child judgement put outside this function
+            try:
+                k = Cluster.pageSortedClusters[self.pageid][self.s1_matrix[1][2][0]].cluster_id
+                m = Cluster.pageSortedClusters[self.pageid][self.s1_matrix[1][2][0]].s1_matrix[1][1][0]
+                logging.debug("Do2 : k : {%s}{%s}" %(k, Cluster.pageSortedClusters[self.pageid][self.s1_matrix[1][1][0]].s1_matrix))
+                if Cluster.pageSortedClusters[self.pageid][k].do_detect() == 2:
+                    if Cluster.pageSortedClusters[self.pageid][k].color == 'white':
+                        logging.debug("do 3 adding {%s} color is {%s}" % (k, Cluster.pageSortedClusters[self.pageid][k].color))
+                        Cluster.starters[key].update([k])
+                if m != -1:
+                    return k
+                else:
+                    try:
+                        assert Cluster.pageSortedClusters[self.pageid][k].s1_matrix[1][2][0] != -1, "cannot do 3, %s" % self
+                        return Cluster.pageSortedClusters[self.pageid][k].do3(key)
+                    except AssertionError:
+                        logging.debug("return %s " % Cluster.pageSortedClusters[self.pageid][k].s1_matrix[1][1][0])
+                        return -1
+            except TypeError:
+                logging.warning(" %s , get error on matrix %s ", self, self.s1_matrix)
+
+    def do4(self, sessionid = None):
+        if sessionid:
+                # row child judgement put outside this function
+            k = Cluster.pageSortedClusters[sessionid][self.pageid][self.s1_matrix[1][2][0]].cluster_id
+            m = Cluster.pageSortedClusters[sessionid][self.pageid][self.s1_matrix[1][2][0]].s1_matrix[1][3][0]
+            if m != -1:
+                return k
+            else:
+                return Cluster.pageSortedClusters[sessionid][self.pageid][k].do4()
+        else:
+            # row child judgement put outside this function
+            k = Cluster.pageSortedClusters[self.pageid][self.s1_matrix[1][2][0]].cluster_id
+            m = Cluster.pageSortedClusters[self.pageid][self.s1_matrix[1][2][0]].s1_matrix[1][3][0]
+            if m != -1:
+                return k
+            else:
+                return Cluster.pageSortedClusters[self.pageid][k].do4()
 
     @classmethod
-    def page_cluster_is_empty(cls, pageid):
-        return pageid not in cls.pageCluster.keys()
+    def page_cluster_is_empty(cls, pageid, sessionid = None):
+        if sessionid:
+            return pageid not in cls.pageCluster[sessionid].keys()
+        else:
+            return pageid not in cls.pageCluster.keys()
 
     @classmethod
-    def set_page_cluster(cls, pageid):
-        if cls.page_cluster_is_empty(pageid):
-            cls.pageCluster[pageid] = set()
-            cls.pageRoots[pageid] = set()
-            cls.pageCells[pageid] = {}
+    def set_page_cluster(cls, pageid, sessionid = None):
+        # init cls.dicts 
+        if sessionid:
+            if sessionid in cls.pageCluster.keys():
+                if cls.page_cluster_is_empty(pageid=pageid, sessionid=sessionid):
+                    cls.pageCluster[sessionid][pageid] = set()
+                    cls.pageRoots[sessionid][pageid] = set()
+                    cls.pageCells[sessionid][pageid] = {}
+            else:
+                # sessionid dict is not build yet
+                cls.pageCluster[sessionid] = {}
+                cls.pageRoots[sessionid] = {}
+                cls.pageCells[sessionid] = {}
+                return cls.set_page_cluster(pageid = pageid, sessionid=sessionid)
+        else:
+            if cls.page_cluster_is_empty(pageid):
+                cls.pageCluster[pageid] = set()
+                cls.pageRoots[pageid] = set()
+                cls.pageCells[pageid] = {}
 
     # starting point
     @classmethod
-    def group_cluster(cls, pageid, cleaned_points):
-        for point in cleaned_points:
-            if point.pageid == pageid:
-                if cls.page_cluster_is_empty(pageid):
-                    cls.set_page_cluster(pageid)
-                if cls.pageCluster[pageid]:
-                    found = False
-                    for cluster in cls.pageCluster[pageid]:
-                        cluster.fill_(point)
-                        if point.point_id in cluster.point_id:
-                            found = True
-                            break
-                    if not found:
+    def group_cluster(cls, pageid, cleaned_points, sessionid = None):
+        if sessionid:
+            for point in cleaned_points:
+                if point.pageid == pageid:
+                    # make sure the cls page dict has been init
+                    cls.set_page_cluster(pageid,sessionid=sessionid)
+                    # if {}[key]: if key exist and not None or empty => True, otherwise False
+                    if cls.pageCluster[sessionid][pageid]:
+                        found = False
+                        for cluster in cls.pageCluster[sessionid][pageid]:
+                            cluster.fill_(point)
+                            if point.point_id in cluster.point_id:
+                                found = True
+                                break
+                        if not found:
+                            new_cluster = Cluster()
+                            new_cluster.fill_(point)
+                            cls.add_page_cluster(new_cluster, sessionid=sessionid)
+                    else:
+                        new_cluster = Cluster()
+                        new_cluster.fill_(point)
+                        cls.add_page_cluster(new_cluster,sessionid=sessionid)
+        else:
+            for point in cleaned_points:
+                if point.pageid == pageid:
+                    if cls.page_cluster_is_empty(pageid):
+                        cls.set_page_cluster(pageid)
+                    if cls.pageCluster[pageid]:
+                        found = False
+                        for cluster in cls.pageCluster[pageid]:
+                            cluster.fill_(point)
+                            if point.point_id in cluster.point_id:
+                                found = True
+                                break
+                        if not found:
+                            new_cluster = Cluster()
+                            new_cluster.fill_(point)
+                            cls.add_page_cluster(new_cluster)
+                    else:
                         new_cluster = Cluster()
                         new_cluster.fill_(point)
                         cls.add_page_cluster(new_cluster)
-                else:
-                    new_cluster = Cluster()
-                    new_cluster.fill_(point)
-                    cls.add_page_cluster(new_cluster)
         return
 
     @classmethod
-    def add_page_cluster(cls, cluster):
-        if not cls.page_cluster_is_empty(cluster.pageid):
-            cls.pageCluster[cluster.pageid].update([cluster])
+    def add_page_cluster(cls, cluster, sessionid = None):
+        if sessionid:
+            if not cls.page_cluster_is_empty(cluster.pageid, sessionid=sessionid):
+                cls.pageCluster[sessionid][cluster.pageid].update([cluster])
+            else:
+                cls.pageCluster[sessionid][cluster.pageid] = set()
+                cls.pageCluster[sessionid][cluster.pageid].update([cluster])
+        else: 
+            if not cls.page_cluster_is_empty(cluster.pageid):
+                cls.pageCluster[cluster.pageid].update([cluster])
+            else:
+                cls.pageCluster[cluster.pageid] = set()
+                cls.pageCluster[cluster.pageid].update([cluster])
+
+    @classmethod
+    def assign_id(cls, pageid, sessionid = None):
+        if sessionid:
+            # O(page*n), better use a page parameter, or assign id after caching?
+            for j, v in enumerate(list(cls.pageSortedClusters[sessionid][pageid])):
+                v.cluster_id = j
+                logging.info(v)
         else:
-            cls.pageCluster[cluster.pageid] = set()
-            cls.pageCluster[cluster.pageid].update([cluster])
-
-    @classmethod
-    def assign_id(cls, pageid):
-        # O(page*n), better use a page parameter, or assign id after caching?
-        for j, v in enumerate(list(cls.pageSortedClusters[pageid])):
-            v.cluster_id = j
-            logging.info(v)
+            # O(page*n), better use a page parameter, or assign id after caching?
+            for j, v in enumerate(list(cls.pageSortedClusters[pageid])):
+                v.cluster_id = j
+                logging.info(v)
         return
 
     @classmethod
-    def sort_page_cluster(cls, pageid):
-        cls.pageSortedClusters[pageid] = sorted(sorted(list(cls.pageCluster[pageid]), key=lambda x: x.key[0]),
+    def sort_page_cluster(cls, pageid, sessionid = None):
+        if sessionid:
+            cls.pageSortedClusters[sessionid][pageid] = sorted(sorted(list(cls.pageCluster[sessionid][pageid]), key=lambda x: x.key[0]),
+                                                key=lambda x: round(x.key[1]), reverse=True)
+        else:    
+            cls.pageSortedClusters[pageid] = sorted(sorted(list(cls.pageCluster[pageid]), key=lambda x: x.key[0]),
                                                 key=lambda x: round(x.key[1]), reverse=True)
 
     @classmethod
-    def locate_roots(cls, pageid):
-        # use after sort clusters
-        for c in cls.pageSortedClusters[pageid]:
-            if c.s1_matrix[0][0:4] == [0, 1, 1, 0]:
-                cls.pageRoots[pageid].update([c.cluster_id])
+    def locate_roots(cls, pageid, sessionid = None):
+        if sessionid:
+            # use after sort clusters
+            for c in cls.pageSortedClusters[sessionid][pageid]:
+                if c.s1_matrix[0][0:4] == [0, 1, 1, 0]:
+                    cls.pageRoots[sessionid][pageid].update([c.cluster_id])
+        else:
+            # use after sort clusters
+            for c in cls.pageSortedClusters[pageid]:
+                if c.s1_matrix[0][0:4] == [0, 1, 1, 0]:
+                    cls.pageRoots[pageid].update([c.cluster_id])
 
     @classmethod
-    def do_group(cls, pageid):
-        for c in cls.pageSortedClusters[pageid]:
-            c.net_up()
+    def do_group(cls, pageid, sessionid = None):
+        if sessionid:
+            for c in cls.pageSortedClusters[sessionid][pageid]:
+                c.net_up()
+        else:
+            for c in cls.pageSortedClusters[pageid]:
+                c.net_up()
         return
 
     @classmethod
@@ -618,86 +737,168 @@ class Cluster:
         pass
 
     @classmethod
-    def do_cell(cls, pageid):
-        # f = det + do2+do3+do_compare start from root
-        cls.starters = {}
-        while len(cls.pageRoots[pageid]) > 0:
-            c_root = cls.pageRoots[pageid].pop()
-            cls.pageCells[pageid][c_root] = []
-            # all starters comes form the c_roots
-            cls.starters[c_root] = set()
-            logging.info("current starter is %s " %cls.starters)
-            cls.starters[c_root].update([c_root])
-            logging.info("this is root %s" % c_root)
-            while len(cls.starters[c_root]) > 0:
-                c_starter = cls.starters[c_root].pop()
-                if cls.pageSortedClusters[pageid][c_starter].do_detect() == 2:
-                    m = cls.pageSortedClusters[pageid][c_starter].do2(c_root)
-                    n = cls.pageSortedClusters[pageid][c_starter].do3(c_root)
-                    mbbox = cls.pageSortedClusters[pageid][m].key
-                    nbbox = cls.pageSortedClusters[pageid][n].key
-                    assumption = (mbbox[0], nbbox[1])
-                    if not any([m == -1, n == -1]):
-                        k = cls.pageSortedClusters[pageid][m].do4()
-                        t = cls.pageSortedClusters[pageid][n].do1()
-                        if k == t:
-                            s = cls.pageSortedClusters[pageid][k].s1_matrix[0][0:4]
-                            x = {'pageid': pageid, 'table_root': c_starter == c_root, 'table_end': s == [1, 0, 0, 1],
-                                 'root': c_starter, 'rtc': m, 'lbc': n, 'rbc': k}
-                            # set to a cell
-                            logging.info("adding cell starter:%s, m:%s, n:%s, t:%s"%(c_starter, m, n, t))
-                            cls.pageCells[pageid][c_root].append(
-                                Cell(x, is_root=x['table_root'], is_end=x['table_end']))
-                            cls.pageSortedClusters[pageid][c_starter].color = 'yellow'
-                        else:
-                            kbbox = cls.pageSortedClusters[pageid][k].key
-                            tbbox = cls.pageSortedClusters[pageid][t].key
-                            if close_enough(kbbox,assumption):
-                                s = cls.pageSortedClusters[pageid][k].s1_matrix[0][0:4]
-                                x = {'pageid': pageid, 'table_root': c_starter == c_root,
-                                     'table_end': s == [1, 0, 0, 1],
-                                     'root': c_starter, 'rtc': m, 'lbc': n, 'rbc': k}
+    def do_cell(cls, pageid, sessionid = None):
+        if sessionid:
+            # f = det + do2+do3+do_compare start from root
+            cls.starters[sessionid] = {}
+            while len(cls.pageRoots[sessionid][pageid]) > 0:
+                c_root = cls.pageRoots[sessionid][pageid].pop()
+                cls.pageCells[sessionid][pageid][c_root] = []
+                # all starters comes form the c_roots
+                cls.starters[sessionid][c_root] = set()
+                logging.info("current starter is %s " %cls.starters[sessionid])
+                cls.starters[sessionid][c_root].update([c_root])
+                logging.info("this is root %s" % c_root)
+                while len(cls.starters[sessionid][c_root]) > 0:
+                    c_starter = cls.starters[sessionid][c_root].pop()
+                    if cls.pageSortedClusters[sessionid][pageid][c_starter].do_detect() == 2:
+                        m = cls.pageSortedClusters[sessionid][pageid][c_starter].do2(c_root)
+                        n = cls.pageSortedClusters[sessionid][pageid][c_starter].do3(c_root)
+                        mbbox = cls.pageSortedClusters[sessionid][pageid][m].key
+                        nbbox = cls.pageSortedClusters[sessionid][pageid][n].key
+                        assumption = (mbbox[0], nbbox[1])
+                        if not any([m == -1, n == -1]):
+                            k = cls.pageSortedClusters[sessionid][pageid][m].do4()
+                            t = cls.pageSortedClusters[sessionid][pageid][n].do1()
+                            if k == t:
+                                s = cls.pageSortedClusters[sessionid][pageid][k].s1_matrix[0][0:4]
+                                x = {'pageid': pageid, 'table_root': c_starter == c_root, 'table_end': s == [1, 0, 0, 1],
+                                    'root': c_starter, 'rtc': m, 'lbc': n, 'rbc': k}
                                 # set to a cell
-                                logging.info("adding cell starter:%s, m:%s, n:%s, k:%s"%(c_starter, m, n, k))
+                                logging.info("adding cell starter:%s, m:%s, n:%s, t:%s"%(c_starter, m, n, t))
+                                cls.pageCells[sessionid][pageid][c_root].append(
+                                    Cell(x, is_root=x['table_root'], is_end=x['table_end'],sessionid=sessionid))
+                                cls.pageSortedClusters[sessionid][pageid][c_starter].color = 'yellow'
+                            else:
+                                kbbox = cls.pageSortedClusters[sessionid][pageid][k].key
+                                tbbox = cls.pageSortedClusters[sessionid][pageid][t].key
+                                if close_enough(kbbox,assumption):
+                                    s = cls.pageSortedClusters[sessionid][pageid][k].s1_matrix[0][0:4]
+                                    x = {'pageid': pageid, 'table_root': c_starter == c_root,
+                                        'table_end': s == [1, 0, 0, 1],
+                                        'root': c_starter, 'rtc': m, 'lbc': n, 'rbc': k}
+                                    # set to a cell
+                                    logging.info("adding cell starter:%s, m:%s, n:%s, k:%s"%(c_starter, m, n, k))
+                                    cls.pageCells[sessionid][pageid][c_root].append(
+                                        Cell(x, is_root=x['table_root'], is_end=x['table_end'], sessionid=sessionid))
+                                    cls.pageSortedClusters[sessionid][pageid][c_starter].color = 'yellow'
+                                else:
+                                    if close_enough(tbbox,assumption):
+                                        s = cls.pageSortedClusters[sessionid][pageid][t].s1_matrix[0][0:4]
+                                        x = {'pageid': pageid, 'table_root': c_starter == c_root,
+                                            'table_end': s == [1, 0, 0, 1],
+                                            'root': c_starter, 'rtc': m, 'lbc': n, 'rbc': t}
+                                        # set to a cell
+                                        logging.info("adding cell, %s, %s, %s, %s " % (c_starter, m, n, t))
+                                        cls.pageCells[sessionid][pageid][c_root].append(
+                                            Cell(x, is_root=x['table_root'], is_end=x['table_end'],sessionid=sessionid))
+                                        cls.pageSortedClusters[sessionid][pageid][c_starter].color = 'yellow'
+                                    else:
+                                        logging.warning("Incorrect cell id {table root : %s }, "
+                                                        "{root : %s } , { (rtc: %s),(lbc: %s), (rbc: %s, %s)}",
+                                                        c_starter == c_root,
+                                                        c_starter, m, n, k, t)
+                                        for c in cls.pageSortedClusters[sessionid][pageid]:
+                                            if close_enough(c.key,assumption):
+                                                s = cls.pageSortedClusters[sessionid][pageid][c.cluster_id].s1_matrix[0][0:4]
+                                                x = {'pageid': pageid, 'table_root': c_starter == c_root,
+                                                    'table_end': s == [1, 0, 0, 1],
+                                                    'root': c_starter, 'rtc': m, 'lbc': n, 'rbc': t}
+                                                # set to a cell
+                                                logging.info("adding cell starter: %s , m: %s, n:%s, t:%s "%(c_starter, m, n, t))
+                                                cls.pageCells[sessionid][pageid][c_root].append(
+                                                    Cell(x, is_root=x['table_root'], is_end=x['table_end'],sessionid=sessionid))
+                                                cls.pageSortedClusters[sessionid][pageid][c_starter].color = 'yellow'
+        else:
+            # f = det + do2+do3+do_compare start from root
+            cls.starters = {}
+            while len(cls.pageRoots[pageid]) > 0:
+                c_root = cls.pageRoots[pageid].pop()
+                cls.pageCells[pageid][c_root] = []
+                # all starters comes form the c_roots
+                cls.starters[c_root] = set()
+                logging.info("current starter is %s " %cls.starters)
+                cls.starters[c_root].update([c_root])
+                logging.info("this is root %s" % c_root)
+                while len(cls.starters[c_root]) > 0:
+                    c_starter = cls.starters[c_root].pop()
+                    if cls.pageSortedClusters[pageid][c_starter].do_detect() == 2:
+                        m = cls.pageSortedClusters[pageid][c_starter].do2(c_root)
+                        n = cls.pageSortedClusters[pageid][c_starter].do3(c_root)
+                        mbbox = cls.pageSortedClusters[pageid][m].key
+                        nbbox = cls.pageSortedClusters[pageid][n].key
+                        assumption = (mbbox[0], nbbox[1])
+                        if not any([m == -1, n == -1]):
+                            k = cls.pageSortedClusters[pageid][m].do4()
+                            t = cls.pageSortedClusters[pageid][n].do1()
+                            if k == t:
+                                s = cls.pageSortedClusters[pageid][k].s1_matrix[0][0:4]
+                                x = {'pageid': pageid, 'table_root': c_starter == c_root, 'table_end': s == [1, 0, 0, 1],
+                                    'root': c_starter, 'rtc': m, 'lbc': n, 'rbc': k}
+                                # set to a cell
+                                logging.info("adding cell starter:%s, m:%s, n:%s, t:%s"%(c_starter, m, n, t))
                                 cls.pageCells[pageid][c_root].append(
                                     Cell(x, is_root=x['table_root'], is_end=x['table_end']))
                                 cls.pageSortedClusters[pageid][c_starter].color = 'yellow'
                             else:
-                                if close_enough(tbbox,assumption):
-                                    s = cls.pageSortedClusters[pageid][t].s1_matrix[0][0:4]
+                                kbbox = cls.pageSortedClusters[pageid][k].key
+                                tbbox = cls.pageSortedClusters[pageid][t].key
+                                if close_enough(kbbox,assumption):
+                                    s = cls.pageSortedClusters[pageid][k].s1_matrix[0][0:4]
                                     x = {'pageid': pageid, 'table_root': c_starter == c_root,
-                                         'table_end': s == [1, 0, 0, 1],
-                                         'root': c_starter, 'rtc': m, 'lbc': n, 'rbc': t}
+                                        'table_end': s == [1, 0, 0, 1],
+                                        'root': c_starter, 'rtc': m, 'lbc': n, 'rbc': k}
                                     # set to a cell
-                                    logging.info("adding cell, %s, %s, %s, %s " % (c_starter, m, n, t))
+                                    logging.info("adding cell starter:%s, m:%s, n:%s, k:%s"%(c_starter, m, n, k))
                                     cls.pageCells[pageid][c_root].append(
                                         Cell(x, is_root=x['table_root'], is_end=x['table_end']))
                                     cls.pageSortedClusters[pageid][c_starter].color = 'yellow'
                                 else:
-                                    logging.warning("Incorrect cell id {table root : %s }, "
-                                                    "{root : %s } , { (rtc: %s),(lbc: %s), (rbc: %s, %s)}",
-                                                    c_starter == c_root,
-                                                    c_starter, m, n, k, t)
-                                    for c in cls.pageSortedClusters[pageid]:
-                                        if close_enough(c.key,assumption):
-                                            s = cls.pageSortedClusters[pageid][c.cluster_id].s1_matrix[0][0:4]
-                                            x = {'pageid': pageid, 'table_root': c_starter == c_root,
-                                                 'table_end': s == [1, 0, 0, 1],
-                                                 'root': c_starter, 'rtc': m, 'lbc': n, 'rbc': t}
-                                            # set to a cell
-                                            logging.info("adding cell starter: %s , m: %s, n:%s, t:%s "%(c_starter, m, n, t))
-                                            cls.pageCells[pageid][c_root].append(
-                                                Cell(x, is_root=x['table_root'], is_end=x['table_end']))
-                                            cls.pageSortedClusters[pageid][c_starter].color = 'yellow'
+                                    if close_enough(tbbox,assumption):
+                                        s = cls.pageSortedClusters[pageid][t].s1_matrix[0][0:4]
+                                        x = {'pageid': pageid, 'table_root': c_starter == c_root,
+                                            'table_end': s == [1, 0, 0, 1],
+                                            'root': c_starter, 'rtc': m, 'lbc': n, 'rbc': t}
+                                        # set to a cell
+                                        logging.info("adding cell, %s, %s, %s, %s " % (c_starter, m, n, t))
+                                        cls.pageCells[pageid][c_root].append(
+                                            Cell(x, is_root=x['table_root'], is_end=x['table_end']))
+                                        cls.pageSortedClusters[pageid][c_starter].color = 'yellow'
+                                    else:
+                                        logging.warning("Incorrect cell id {table root : %s }, "
+                                                        "{root : %s } , { (rtc: %s),(lbc: %s), (rbc: %s, %s)}",
+                                                        c_starter == c_root,
+                                                        c_starter, m, n, k, t)
+                                        for c in cls.pageSortedClusters[pageid]:
+                                            if close_enough(c.key,assumption):
+                                                s = cls.pageSortedClusters[pageid][c.cluster_id].s1_matrix[0][0:4]
+                                                x = {'pageid': pageid, 'table_root': c_starter == c_root,
+                                                    'table_end': s == [1, 0, 0, 1],
+                                                    'root': c_starter, 'rtc': m, 'lbc': n, 'rbc': t}
+                                                # set to a cell
+                                                logging.info("adding cell starter: %s , m: %s, n:%s, t:%s "%(c_starter, m, n, t))
+                                                cls.pageCells[pageid][c_root].append(
+                                                    Cell(x, is_root=x['table_root'], is_end=x['table_end']))
+                                                cls.pageSortedClusters[pageid][c_starter].color = 'yellow'
 
 
 class Cell:
-    """{pageid : {table_root:[cells]}}"""
+    """{pageid : {table_root:[cells]}}==>
+    {sessionid:
+        {
+            pageid:
+            {   
+                table_root:
+                    [cells]
+                }
+        }
+    }"""
     starters = {}
     pageCells = Cluster.pageCells
 
-    def __init__(self, matrix, is_root=False, is_end=False):
+    def __init__(self, matrix, is_root=False, is_end=False, sessionid = None):
         self.matrix = matrix
+        self.sessionid = sessionid
         self.pageid = matrix['pageid']
         self.cell_id = None
         self._height = -1
@@ -741,9 +942,17 @@ class Cell:
         return
 
     @classmethod
-    def purge(cls):
-        cls.starters = {}
-        cls.pageCells = Cluster.pageCells
+    def purge(cls,sessionid = None):
+        if sessionid:
+            try:
+                del cls.starters[sessionid]
+            except KeyError:
+                logging.info("no such <%s> session in Table " % sessionid)
+            finally:
+                cls.pageCells = Cluster.pageCells
+        else:    
+            cls.starters = {}
+            cls.pageCells = Cluster.pageCells
 
     def check_virtual_matrix(self):
         # pending check if the matrix not contains [1, 0, 1, 1]
@@ -803,7 +1012,7 @@ class Cell:
                 else:
                     pass
             except StopIteration:
-                print('not found next neighbor')
+                logging.warning('not found next neighbor')
                 break
 
     @property
@@ -828,7 +1037,7 @@ class Cell:
                 else:
                     pass
             except StopIteration:
-                print('not found next neighbor')
+                logging.warning('not found next neighbor')
                 break
 
     def set_row_neightbor(self, obj):
@@ -858,8 +1067,12 @@ class Cell:
         return self._upper_boundary
 
     @upper_boundary.setter
-    def upper_boundary(self, matrix):
-        self._upper_boundary = round(max(Cluster.pageSortedClusters[self.pageid][matrix['root']].key[1],
+    def upper_boundary(self, matrix,sessionid = None):
+        if sessionid:
+            self._upper_boundary = round(max(Cluster.pageSortedClusters[sessionid][self.pageid][matrix['root']].key[1],
+                                         Cluster.pageSortedClusters[sessionid][self.pageid][matrix['rtc']].key[1]), 2)
+        else:
+            self._upper_boundary = round(max(Cluster.pageSortedClusters[self.pageid][matrix['root']].key[1],
                                          Cluster.pageSortedClusters[self.pageid][matrix['rtc']].key[1]), 2)
 
     @property
@@ -867,8 +1080,12 @@ class Cell:
         return self._lower_boundary
 
     @lower_boundary.setter
-    def lower_boundary(self, matrix):
-        self._lower_boundary = round(min(Cluster.pageSortedClusters[self.pageid][matrix['lbc']].key[1],
+    def lower_boundary(self, matrix, sessionid = None):
+        if sessionid:
+            self._lower_boundary = round(min(Cluster.pageSortedClusters[sessionid][self.pageid][matrix['lbc']].key[1],
+                                         Cluster.pageSortedClusters[sessionid][self.pageid][matrix['rbc']].key[1]), 2)
+        else:
+            self._lower_boundary = round(min(Cluster.pageSortedClusters[self.pageid][matrix['lbc']].key[1],
                                          Cluster.pageSortedClusters[self.pageid][matrix['rbc']].key[1]), 2)
 
     @property
@@ -876,8 +1093,12 @@ class Cell:
         return self._left_boundary
 
     @left_boundary.setter
-    def left_boundary(self, matrix):
-        self._left_boundary = round(min(Cluster.pageSortedClusters[self.pageid][matrix['lbc']].key[0],
+    def left_boundary(self, matrix, sessionid =None):
+        if sessionid:
+            self._left_boundary = round(min(Cluster.pageSortedClusters[sessionid][self.pageid][matrix['lbc']].key[0],
+                                        Cluster.pageSortedClusters[sessionid][self.pageid][matrix['root']].key[0]), 2)
+        else:
+            self._left_boundary = round(min(Cluster.pageSortedClusters[self.pageid][matrix['lbc']].key[0],
                                         Cluster.pageSortedClusters[self.pageid][matrix['root']].key[0]), 2)
 
     @property
@@ -885,8 +1106,12 @@ class Cell:
         return self._right_boundary
 
     @right_boundary.setter
-    def right_boundary(self, matrix):
-        self._right_boundary = round(max(Cluster.pageSortedClusters[self.pageid][matrix['rtc']].key[0],
+    def right_boundary(self, matrix, sessionid = None):
+        if sessionid:
+            self._right_boundary = round(max(Cluster.pageSortedClusters[sessionid][self.pageid][matrix['rtc']].key[0],
+                                         Cluster.pageSortedClusters[sessionid][self.pageid][matrix['rbc']].key[0]), 2)
+        else:
+            self._right_boundary = round(max(Cluster.pageSortedClusters[self.pageid][matrix['rtc']].key[0],
                                          Cluster.pageSortedClusters[self.pageid][matrix['rbc']].key[0]), 2)
 
     @property
@@ -930,7 +1155,8 @@ class Cell:
         self._text += [t]
 
     def __repr__(self):
-        return ('<pageid: %s ,'
+        return ('<sessionid:%s,
+                'pageid: %s ,'
                 'table_no: %s '
                 'cell_id: %s, '
                 'matrix: %s ,'
@@ -939,27 +1165,41 @@ class Cell:
                 'content: %s, '
                 'vir_martix: %s ,'
                 '>\n'
-                % (self.pageid, self.table_no, self.cell_id,
+                % (self.sessionid,self.pageid, self.table_no, self.cell_id,
                    self.matrix, self._bbox, self._centre, self.text,
                    self.virtual_matrix))
 
     @classmethod
-    def assign_text(cls, pageid, textlist):
-        temp = copy.deepcopy(textlist)
-        while len(temp) > 0:
-            current = temp.pop(0)
-            for v in cls.pageCells[pageid].values():
-                for c in v:
-                    if inside(c, current):
-                        c.text = current.get_text()
+    def assign_text(cls, pageid, textlist, sessionid = None):
+        if sessionid:
+            temp = copy.deepcopy(textlist)
+            while len(temp) > 0:
+                current = temp.pop(0)
+                for v in cls.pageCells[sessionid][pageid].values():
+                    for c in v:
+                        if inside(c, current):
+                            c.text = current.get_text()
+        else:
+            temp = copy.deepcopy(textlist)
+            while len(temp) > 0:
+                current = temp.pop(0)
+                for v in cls.pageCells[pageid].values():
+                    for c in v:
+                        if inside(c, current):
+                            c.text = current.get_text()
 
 
     @classmethod
-    def check_text(cls, pageid):
-        for v in cls.pageCells[pageid].values():
-            for c in v:
-                logging.info("the current cell {%s} contains text {%s}, clusters : {%s}", c.bbox, c.text, c.matrix)
-                pass
+    def check_text(cls, pageid, sessionid = None):
+        if sessionid:
+            for v in cls.pageCells[pageid].values():
+                for c in v:
+                    logging.info("the current cell {%s} contains text {%s}, clusters : {%s}", c.bbox, c.text, c.matrix)              
+        else:
+            for v in cls.pageCells[pageid].values():
+                for c in v:
+                    logging.info("the current cell {%s} contains text {%s}, clusters : {%s}", c.bbox, c.text, c.matrix)
+                    
 
 
 class Table:
@@ -971,8 +1211,9 @@ class Table:
     and last a table better provide a write into function to write a table to a excel workbook with sheet name
     equals table names (maybe the header or few words of left up text box)"""
 
-    def __init__(self, bbox, pageid, doc, table_no, base_matrix, horizontal_list, vertical_list):
+    def __init__(self, bbox, pageid, doc, table_no, base_matrix, horizontal_list, vertical_list, sessionid = None):
         self.bbox = bbox
+        self.sessionid = sessionid
         self.table_no = table_no
         self.pageid = pageid
         self.doc = doc
@@ -981,14 +1222,15 @@ class Table:
         self.vertical_list = vertical_list
 
     def __repr__(self):
-        return '< pageid: %s, ' \
+        return '<sessionid: %s'\ 
+                'pageid: %s, ' \
                'table_no: %s  ' \
                'bbox: %s  ' \
                'base_matrix: %s' % (
-                   self.pageid, self.table_no, self.bbox, self.base_matrix
+                  self.sessionid, self.pageid, self.table_no, self.bbox, self.base_matrix
                )
     
-    def commandline_check_tabkle(self):
+    def commandline_check_table(self):
         pass
 
     def table_to_excel(self, worksheet, start_row=1, start_col=1, **kwargs):
@@ -1050,9 +1292,8 @@ class Table:
             worksheet.title = 'Page' + str(kwargs['ref'][self.pageid])
 
     @classmethod
-    def create_tables(cls, obj, pageid, table_no=0, back_up =None):
-        for i in obj:
-            print(i)
+    def create_tables(cls, obj, pageid, table_no=0, back_up =None, sessionid = None):
+        
         class FakeCell:
             def __init__(self, bbox, matrix, no):
                 self.no = no
@@ -1109,41 +1350,80 @@ class Table:
                     p = x
                     yield generate_fake_cell(bbox=current_bbox, base_matrix=base_matrix, n=n, p=p, no=(n, p))
                 x += 1
-
-        sorted_obj = sorted(obj, key=lambda x: x.centre[1])
-        bbox = get_bbox(obj=sorted_obj)
-        matrix_list = get_matrix_list(obj=sorted_obj, table_bbox=bbox)
-        temp = sorted(matrix_list[0], reverse=True)
-        vertical_list = [abs(temp[i] - temp[i - 1]) * 1.75 for i in range(1, len(temp))]
-        horizontal_list = [(matrix_list[1][i] - matrix_list[1][i - 1]) / 3.2 for i in range(1, len(matrix_list[1]))]
-        base_matrix = conduct_base_matrix(matrix_list[0], matrix_list[1])
-        pop_cell = get_fake_cell(matrix_list=matrix_list, base_matrix=base_matrix)
-        for i in pop_cell:
-            found = False
-            for j in sorted_obj:
-                if inside(j, i):
-                    j.virtual_matrix_builder(i.matrix)
-                    j.table_no = table_no
-                    found = True
-            if not found:
-               
-                if back_up:
-                    temp = []
-                    while len(back_up)>0:
-                        cur = back_up.pop(0)
-                        if inside(cur,i):
-                            cur_cell = Cell(matrix={'pageid': pageid})
-                            cur_cell.virtual_matrix_builder(i.matrix)
-                            cur_cell.table_no = table_no
-                            cur_cell.bbox = i.bbox
-                            cur_cell.text = cur.get_text()
-                            print(cur_cell)
-                        else:
-                            temp.append(cur)
-                    back_up = temp
- 
-        yield Table(bbox=bbox, pageid=pageid, doc=sorted_obj, table_no=table_no,
-                    base_matrix=base_matrix, horizontal_list=horizontal_list, vertical_list=vertical_list)
+        if sessionid:
+            for i in obj:
+                logging.info(i)
+            sorted_obj = sorted(obj, key=lambda x: x.centre[1])
+            bbox = get_bbox(obj=sorted_obj)
+            matrix_list = get_matrix_list(obj=sorted_obj, table_bbox=bbox)
+            temp = sorted(matrix_list[0], reverse=True)
+            vertical_list = [abs(temp[i] - temp[i - 1]) * 1.75 for i in range(1, len(temp))]
+            horizontal_list = [(matrix_list[1][i] - matrix_list[1][i - 1]) / 3.2 for i in range(1, len(matrix_list[1]))]
+            base_matrix = conduct_base_matrix(matrix_list[0], matrix_list[1])
+            pop_cell = get_fake_cell(matrix_list=matrix_list, base_matrix=base_matrix)
+            for i in pop_cell:
+                found = False
+                for j in sorted_obj:
+                    if inside(j, i):
+                        j.virtual_matrix_builder(i.matrix)
+                        j.table_no = table_no
+                        found = True
+                if not found:
+                
+                    if back_up:
+                        temp = []
+                        while len(back_up)>0:
+                            cur = back_up.pop(0)
+                            if inside(cur,i):
+                                cur_cell = Cell(matrix={'pageid': pageid}, sessionid=sessionid)
+                                cur_cell.virtual_matrix_builder(i.matrix)
+                                cur_cell.table_no = table_no
+                                cur_cell.bbox = i.bbox
+                                cur_cell.text = cur.get_text()
+                                logging.infor("current cell is %s" % cur_cell)
+                            else:
+                                temp.append(cur)
+                        back_up = temp
+    
+            yield Table(bbox=bbox, pageid=pageid, doc=sorted_obj, table_no=table_no,
+                        base_matrix=base_matrix, horizontal_list=horizontal_list, vertical_list=vertical_list, sessionid=sessionid)
+        else:
+            for i in obj:
+                logging.info(i)
+            sorted_obj = sorted(obj, key=lambda x: x.centre[1])
+            bbox = get_bbox(obj=sorted_obj)
+            matrix_list = get_matrix_list(obj=sorted_obj, table_bbox=bbox)
+            temp = sorted(matrix_list[0], reverse=True)
+            vertical_list = [abs(temp[i] - temp[i - 1]) * 1.75 for i in range(1, len(temp))]
+            horizontal_list = [(matrix_list[1][i] - matrix_list[1][i - 1]) / 3.2 for i in range(1, len(matrix_list[1]))]
+            base_matrix = conduct_base_matrix(matrix_list[0], matrix_list[1])
+            pop_cell = get_fake_cell(matrix_list=matrix_list, base_matrix=base_matrix)
+            for i in pop_cell:
+                found = False
+                for j in sorted_obj:
+                    if inside(j, i):
+                        j.virtual_matrix_builder(i.matrix)
+                        j.table_no = table_no
+                        found = True
+                if not found:
+                
+                    if back_up:
+                        temp = []
+                        while len(back_up)>0:
+                            cur = back_up.pop(0)
+                            if inside(cur,i):
+                                cur_cell = Cell(matrix={'pageid': pageid})
+                                cur_cell.virtual_matrix_builder(i.matrix)
+                                cur_cell.table_no = table_no
+                                cur_cell.bbox = i.bbox
+                                cur_cell.text = cur.get_text()
+                                logging.infor("current cell is %s" % cur_cell)
+                            else:
+                                temp.append(cur)
+                        back_up = temp
+    
+            yield Table(bbox=bbox, pageid=pageid, doc=sorted_obj, table_no=table_no,
+                        base_matrix=base_matrix, horizontal_list=horizontal_list, vertical_list=vertical_list)
 
     def table_to_df(self):
         """
@@ -1203,19 +1483,25 @@ class Table:
             else:
                 ta[row] = []
                 ta[row].append(fc.value)
-        print(ta)
+        logging.info("table is %s "% ta)
         result = pd.DataFrame(ta)
         logging.info("page_to df now result is %s \n"%result)
         return result, ta
 
     @classmethod
-    def get_tables(cls, objs, pageid, table_no=0, backup = None):
+    def get_tables(cls, objs, pageid, table_no=0, backup = None, sessionid = None):
         """a generator: obj is ltpage
         objs is pagecells[pageid].values"""
-        table_no = table_no
-        for obj in objs:
-            yield cls.create_tables(obj, table_no=table_no, pageid=pageid, back_up=backup)
-            table_no += 1
+        if sessionid:
+            table_no = table_no
+            for obj in objs:
+                yield cls.create_tables(obj, table_no=table_no, pageid=pageid, back_up=backup, sessionid=sessionid)
+                table_no += 1
+        else:
+            table_no = table_no
+            for obj in objs:
+                yield cls.create_tables(obj, table_no=table_no, pageid=pageid, back_up=backup)
+                table_no += 1
         return
 
 
