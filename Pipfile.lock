@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "219c10ed2af17c1060a36bc7e45b78cdd7b6a85fc5b401582e20b608e5a02f93"
+            "sha256": "2056de3f0c11c6488c4449405c22cff8abde18de80cec22e71bdd1d11056282e"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -52,6 +52,17 @@
                 "sha256:614d9722d572f6246302c4491846d2c393c199cfa4edc9af593437691683335b"
             ],
             "version": "==1.0.1"
+        },
+        "fuzzywuzzy": {
+            "extras": [
+                "speedup"
+            ],
+            "hashes": [
+                "sha256:5ac7c0b3f4658d2743aa17da53a55598144edbc5bee3c6863840636e6926f254",
+                "sha256:6f49de47db00e1c71d40ad16da42284ac357936fa9b66bea1df63fed07122d62"
+            ],
+            "index": "pypi",
+            "version": "==0.17.0"
         },
         "jdcal": {
             "hashes": [
@@ -198,6 +209,12 @@
                 "sha256:75bb3f31ea686f1197762692a9ee6a7550b59fc6ca3a1f4b5d7e32fb98e2da2a"
             ],
             "version": "==2.8.1"
+        },
+        "python-levenshtein": {
+            "hashes": [
+                "sha256:033a11de5e3d19ea25c9302d11224e1a1898fe5abd23c61c7c360c25195e3eb1"
+            ],
+            "version": "==0.12.0"
         },
         "pytz": {
             "hashes": [

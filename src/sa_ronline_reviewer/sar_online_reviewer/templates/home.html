@@ -1,12 +1,68 @@
 {% extends 'base.html' %}
-
+{% load static %}
 {% block content %}
-<div class = "container">
-<h2>Homepage</h2>
-<p>Welcome to Surveillance Auto Reviewer, {% if user.is_authenticated %}{{ user.username }}{% else %}visitor{% endif %}!
-</p>
-<p>
-    <strong>Total users registered: </strong> {{ count }}
-</p>
+<div class="container-fluid" style="width: 80%;">
+    <h2>Homepage</h2>
+    <p>Welcome to Surveillance Auto Reviewer,
+        {% if user.is_authenticated %}{{ user.username }}{% else %}visitor{% endif %}!
+    </p>
+    <p>
+        <strong>Total users registered: </strong> {{ count }}
+    </p>
+    <div class="row">
+        <div style="padding: 0.5rem; padding-left: 2.5rem;">
+            <div class="card"
+                style="width: 18rem; padding: 1rem; background-color:cornsilk; color: black; font-weight: 100;">
+                <img class="card-img-top" src="{% static 'images/baitme.jpg' %}" alt="Card image cap">
+                <div class="card-body">
+                    <h5 class="card-title">DAPSA</h5>
+                    <p class="card-text" style="font-style: italic; font-weight: 300;">I know its ugly, but...hmm
+                        whatever</p>
+                    <a href="https://w.amazon.com/bin/view/PBPSC_Surveilance_Academy/General_Introduction/#DAPSA"
+                        class="btn btn-primary" target="blank">Go DAPSA wiki</a>
+                </div>
+            </div>
+        </div>
+        <div style="padding: 0.5rem; padding-left: 2.5rem;">
+            <div class="card"
+                style="width: 18rem; padding: 1rem; background-color:cornsilk; color: black; font-weight: 100;">
+                <img class="card-img-top" src="{% static 'images/baitme.jpg' %}" alt="Card image cap">
+                <div class="card-body">
+                    <h5 class="card-title">DAPSA</h5>
+                    <p class="card-text" style="font-style: italic; font-weight: 300;">I know its ugly, but...hmm
+                        whatever</p>
+                    <a href="https://w.amazon.com/bin/view/PBPSC_Surveilance_Academy/General_Introduction/#DAPSA"
+                        class="btn btn-primary" target="blank"> Go DAPSA wiki</a>
+                </div>
+            </div>
+        </div>
+        <div style="padding: 0.5rem; padding-left: 2.5rem;">
+            <div class="card"
+                style="width: 18rem; padding: 1rem; background-color:cornsilk; color: black; font-weight: 100;">
+                <img class="card-img-top" src="{% static 'images/baitme.jpg' %}" alt="Card image cap">
+                <div class="card-body">
+                    <h5 class="card-title">DAPSA</h5>
+                    <p class="card-text" style="font-style: italic; font-weight: 300;">I know its ugly, but...hmm
+                        whatever</p>
+                    <a href="https://w.amazon.com/bin/view/PBPSC_Surveilance_Academy/General_Introduction/#DAPSA"
+                        class="btn btn-primary" target="blank">Go DAPSA wiki</a>
+                </div>
+            </div>
+        </div>
+        <div style="padding: 0.5rem; padding-left: 2.5rem;">
+            <div class="card"
+                style="width: 18rem; padding: 1rem; background-color:cornsilk; color: black; font-weight: 100;">
+                <img class="card-img-top" src="{% static 'images/baitme.jpg' %}" alt="Card image cap">
+                <div class="card-body">
+                    <h5 class="card-title">DAPSA</h5>
+                    <p class="card-text" style="font-style: italic; font-weight: 300;">I know its ugly, but...hmm
+                        whatever</p>
+                    <a href="https://w.amazon.com/bin/view/PBPSC_Surveilance_Academy/General_Introduction/#DAPSA"
+                        class="btn btn-primary" target="blank">Go DAPSA wiki</a>
+                </div>
+            </div>
+        </div>
+
+    </div>
 </div>
 {% endblock %}

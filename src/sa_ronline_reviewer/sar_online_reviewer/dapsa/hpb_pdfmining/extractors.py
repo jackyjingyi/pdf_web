@@ -1064,6 +1064,14 @@ class Searcher(BasicDict):
                 for g in wordsout:
                     if any([p.lower() in g[4].lower() for p in self.force]):            
                         return set(wordsout)
+            else:
+                _temp = []
+                for w in wordsout:
+                    _temp+= [i.strip() for i in w[4].split('\n')]
+                wordsout = _temp
+                print(wordsout)
+                # assert 1==2
+                return set(wordsout)
         if self.force:
             for text in self.force:
                 # print(text)
